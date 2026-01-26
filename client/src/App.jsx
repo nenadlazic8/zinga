@@ -21,10 +21,10 @@ function mulberry32(seed) {
 }
 
 function getTeamNames(players) {
-  const p1 = players.find((p) => p.seat === 0)?.name || "?Çö";
-  const p2 = players.find((p) => p.seat === 1)?.name || "?Çö";
-  const p3 = players.find((p) => p.seat === 2)?.name || "?Çö";
-  const p4 = players.find((p) => p.seat === 3)?.name || "?Çö";
+  const p1 = players.find((p) => p.seat === 0)?.name || "?";
+  const p2 = players.find((p) => p.seat === 1)?.name || "?";
+  const p3 = players.find((p) => p.seat === 2)?.name || "?";
+  const p4 = players.find((p) => p.seat === 3)?.name || "?";
   return {
     A: `Tim ${p1} + ${p3}`,
     B: `Tim ${p2} + ${p4}`
@@ -189,7 +189,7 @@ function GameOver({ match, players, socket, playerId, roomId, onLeave, history }
       {confettiDone && (
         <div className="text-center space-y-6 animate-fade-in">
           <div className="text-6xl font-bold text-yellow-400 drop-shadow-[0_0_20px_rgba(255,215,0,0.8)]">
-            ??Åå POBEDNIK IGRE ??Åå
+            ?? POBEDNIK IGRE ??
           </div>
           <div className="text-4xl font-semibold text-white mt-4">{winnerName}</div>
           <div className="text-2xl text-white/80 mt-6">
@@ -227,7 +227,7 @@ function GameOver({ match, players, socket, playerId, roomId, onLeave, history }
                   : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg hover:shadow-xl"
               ].join(" ")}
             >
-              {rematchClicked ? `?îekam ostale... (${readyCount}/4)` : "Revan?í"}
+              {rematchClicked ? `??ekam ostale... (${readyCount}/4)` : "Revan??"}
             </button>
             <button
               onClick={handleLeave}
@@ -239,11 +239,11 @@ function GameOver({ match, players, socket, playerId, roomId, onLeave, history }
                   : "bg-gray-600 hover:bg-gray-700 text-white shadow-lg hover:shadow-xl"
               ].join(" ")}
             >
-              {leaveClicked ? "Izlazim..." : "Iza?æi iz igre"}
+              {leaveClicked ? "Izlazim..." : "Iza?i iz igre"}
             </button>
           </div>
           {readyCount > 0 && readyCount < 4 && rematchClicked && (
-            <div className="text-white/60 text-sm mt-2">Spremno: {readyCount}/4 igra?ìa</div>
+            <div className="text-white/60 text-sm mt-2">Spremno: {readyCount}/4 igra??a</div>
           )}
         </div>
       )}
@@ -404,7 +404,7 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
   );
 }
 
-// (removed) TableDecor: props are now user-selected via "Uzmi pi?çe"
+// (removed) TableDecor: props are now user-selected via "Uzmi pi?e"
 
 function PlayerPropsLayer({ mySeat, players }) {
   // Deterministic jitter so all clients see same placements
@@ -573,7 +573,7 @@ function CapturedCardsModal({ open, onClose, title, cards }) {
               ))}
             </div>
           ) : (
-            <div className="text-sm text-white/70">Jo?í uvek niste nosili karte.</div>
+            <div className="text-sm text-white/70">Jo? uvek niste nosili karte.</div>
           )}
         </div>
       </div>
@@ -590,7 +590,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-2xl font-semibold">Zinga</div>
-            <div className="text-white/70 text-sm mt-1">Online karta?íka igra 2v2 (osnovni engine)</div>
+            <div className="text-white/70 text-sm mt-1">Online karta??ka igra 2v2 (osnovni engine)</div>
           </div>
           <div className="text-xs text-white/60">UI: srpski</div>
         </div>
@@ -628,13 +628,13 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
             "disabled:opacity-60 disabled:cursor-not-allowed transition"
           ].join(" ")}
         >
-          {joining ? "Povezivanje..." : "U?æi / napravi sobu"}
+          {joining ? "Povezivanje..." : "U?i / napravi sobu"}
         </button>
 
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Igra?ìi u sobi</div>
-            <div className="text-xs text-white/60">Igra kre?çe kada se pove??u 4 igra?ìa.</div>
+            <div className="text-sm font-semibold">Igra??i u sobi</div>
+            <div className="text-xs text-white/60">Igra kre?e kada se pove?u 4 igra?a.</div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             {Array.from({ length: 4 }).map((_, i) => {
@@ -642,8 +642,8 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
               return (
                 <div key={i} className="rounded-xl bg-black/25 ring-1 ring-white/10 p-3">
                   <div className="text-xs text-white/60">Mesto {i + 1}</div>
-                  <div className="mt-1 font-semibold">{p ? p.name : "?Çö"}</div>
-                  {p ? <div className="text-xs text-white/60">{teamLabel(p.team, players)}</div> : <div className="text-xs text-white/40">?îeka se...</div>}
+                  <div className="mt-1 font-semibold">{p ? p.name : "?"}</div>
+                  {p ? <div className="text-xs text-white/60">{teamLabel(p.team, players)}</div> : <div className="text-xs text-white/40">??eka se...</div>}
                 </div>
               );
             })}
@@ -669,16 +669,16 @@ function WaitingRoom({ state, playerId }) {
               Povezani ste{me ? ` kao ${me.name} (mesto ${me.seat + 1})` : ""}. Soba: <span className="font-semibold">{state.roomId}</span>
             </div>
           </div>
-          <SeatBadge label={missing === 0 ? "Start" : `?îeka se jo?í: ${missing}`} active={missing === 0} />
+          <SeatBadge label={missing === 0 ? "Start" : `?eka se jo?: ${missing}`} active={missing === 0} />
         </div>
 
         <div className="mt-5 text-sm text-white/70">
-          Igra po?ìinje automatski kada se pove??u 4 igra?ìa. Timovi su fiksni: Tim A (1 i 3), Tim B (2 i 4).
+          Igra po??inje automatski kada se pove??u 4 igra??a. Timovi su fiksni: Tim A (1 i 3), Tim B (2 i 4).
         </div>
 
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Igra?ìi u sobi</div>
+            <div className="text-sm font-semibold">Igra??i u sobi</div>
             <div className="text-xs text-white/60">Status: Lobby</div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -687,8 +687,8 @@ function WaitingRoom({ state, playerId }) {
               return (
                 <div key={i} className="rounded-xl bg-black/25 ring-1 ring-white/10 p-3">
                   <div className="text-xs text-white/60">Mesto {i + 1}</div>
-                  <div className="mt-1 font-semibold">{p ? p.name : "?Çö"}</div>
-                  {p ? <div className="text-xs text-white/60">{teamLabel(p.team, players)}</div> : <div className="text-xs text-white/40">?îeka se...</div>}
+                  <div className="mt-1 font-semibold">{p ? p.name : "?"}</div>
+                  {p ? <div className="text-xs text-white/60">{teamLabel(p.team, players)}</div> : <div className="text-xs text-white/40">??eka se...</div>}
                 </div>
               );
             })}
@@ -747,7 +747,7 @@ function Game({ state, playerId, socket }) {
   const teamNames = useMemo(() => getTeamNames(roomPlayers), [roomPlayers]);
   const myTeamLabel = myTeam === "A" ? teamNames.A : teamNames.B;
 
-  // Dealing animation (one-by-one reveal) ?Çö driven by server deal event
+  // Dealing animation (one-by-one reveal) ??? driven by server deal event
   const latestHandLenRef = useRef(0);
   const latestTableCountRef = useRef(0);
   latestHandLenRef.current = myHand.length;
@@ -777,7 +777,7 @@ function Game({ state, playerId, socket }) {
 
     // FX
     if (deal.isLast) {
-      setFx({ id: deal.id, kind: "deal", title: "POSLEDNJE DELJENJE", subtitle: "Nema vi?íe karata u ?ípilu", durationMs: 2000 });
+      setFx({ id: deal.id, kind: "deal", title: "POSLEDNJE DELJENJE", subtitle: "Nema vi?e karata u ?pilu", durationMs: 2000 });
     } else if (isInitial && (deal.hand ?? 1) > 1) {
       setFx({ id: deal.id, kind: "round", title: "NOVA RUNDA", subtitle: `Ruka ${deal.hand}`, durationMs: 1400 });
     }
@@ -854,7 +854,7 @@ function Game({ state, playerId, socket }) {
     if (a.zinga === 10) {
       setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
     } else if (a.zinga === 20) {
-      setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ??ANDARA! +20", subtitle: a.playerName });
+      setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ?ANDARA! +20", subtitle: a.playerName });
     }
   }, [g?.lastAction?.id, mySeat]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -894,7 +894,7 @@ function Game({ state, playerId, socket }) {
     if (!socket) return;
     setActionError("");
     socket.emit("game:play", { cardId: card.id }, (res) => {
-      if (!res?.ok) setActionError(res?.error || "Gre?íka.");
+      if (!res?.ok) setActionError(res?.error || "Gre??ka.");
     });
   }
 
@@ -902,7 +902,7 @@ function Game({ state, playerId, socket }) {
     if (!socket) return;
     socket.emit("player:props", { drink: propsDrink || null, glass: propsGlass, cigarette: propsCig }, (res) => {
       if (!res?.ok) {
-        setActionError(res?.error || "Gre?íka.");
+        setActionError(res?.error || "Gre??ka.");
         return;
       }
       setShowProps(false);
@@ -925,8 +925,8 @@ function Game({ state, playerId, socket }) {
           <div className="relative w-full max-w-lg rounded-2xl bg-neutral-950 ring-1 ring-white/10 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-lg font-semibold">Uzmi pi?çe</div>
-                <div className="text-xs text-white/60">Svi vide ?íta si uzeo.</div>
+                <div className="text-lg font-semibold">Uzmi pi?e</div>
+                <div className="text-xs text-white/60">Svi vide ?ta si uzeo.</div>
               </div>
               <button
                 type="button"
@@ -939,7 +939,7 @@ function Game({ state, playerId, socket }) {
 
             <div className="mt-4 grid grid-cols-2 gap-2">
               {[
-                { id: "spricer", label: "?ápricer", img: imgSpricer },
+                { id: "spricer", label: "??pricer", img: imgSpricer },
                 { id: "pivo", label: "Pivo", img: imgPivo }
               ].map((opt) => (
                 <button
@@ -961,12 +961,12 @@ function Game({ state, playerId, socket }) {
 
             <label className="mt-4 flex items-center gap-2 text-sm text-white/80 select-none">
               <input type="checkbox" checked={propsGlass} onChange={(e) => setPropsGlass(e.target.checked)} />
-              ??elim ?ìa?íu
+              ?elim ?a?u
             </label>
 
             <label className="mt-4 flex items-center gap-2 text-sm text-white/80 select-none">
               <input type="checkbox" checked={propsCig} onChange={(e) => setPropsCig(e.target.checked)} />
-              ??elim cigaretu
+              ?elim cigaretu
             </label>
 
             <div className="mt-4 flex justify-end gap-2">
@@ -975,14 +975,14 @@ function Game({ state, playerId, socket }) {
                 onClick={() => setShowProps(false)}
                 className="rounded-xl bg-white/10 hover:bg-white/15 ring-1 ring-white/10 px-3 py-2 text-sm transition"
               >
-                Otka??i
+                Otka?i
               </button>
               <button
                 type="button"
                 onClick={saveProps}
                 className="rounded-xl bg-emerald-500 text-black hover:bg-emerald-400 px-4 py-2 text-sm font-semibold transition"
               >
-                Sa?ìuvaj
+                Sa?uvaj
               </button>
             </div>
           </div>
@@ -991,20 +991,20 @@ function Game({ state, playerId, socket }) {
       <CapturedCardsModal
         open={showCaptured}
         onClose={() => setShowCaptured(false)}
-        title={`No?íene karte (${myTeamLabel})`}
+        title={`No?ene karte (${myTeamLabel})`}
         cards={myCaptured}
       />
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="text-2xl font-semibold">Zinga</div>
-            <SeatBadge label={`Va?í tim: ${myTeamLabel}`} active />
+            <SeatBadge label={`Va?? tim: ${myTeamLabel}`} active />
             <span className="text-xs text-white/60">Soba: {state.roomId}</span>
           </div>
           <div className="flex items-center gap-2">
             {state.phase === "playing" ? (
               <SeatBadge
-                label={isMyTurn ? "Na potezu ste" : `Na potezu: ${turnPlayer ? turnPlayer.name : "?Çö"}`}
+                label={isMyTurn ? "Na potezu ste" : `Na potezu: ${turnPlayer ? turnPlayer.name : "???"}`}
                 active={isMyTurn}
               />
             ) : state.phase === "finished" ? (
@@ -1055,7 +1055,7 @@ function Game({ state, playerId, socket }) {
                     onClick={() => setShowProps(true)}
                     className="rounded-xl bg-black/35 hover:bg-black/45 ring-1 ring-white/10 px-3 py-2 text-sm text-white/90 transition"
                   >
-                    Uzmi pi?çe
+                    Uzmi pi?e
                   </button>
                   <div className="flex items-center gap-2 rounded-xl bg-black/35 ring-1 ring-white/10 px-2 py-1">
                     <input
@@ -1064,7 +1064,7 @@ function Game({ state, playerId, socket }) {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") sendChat();
                       }}
-                      placeholder="Napi?íi..."
+                      placeholder="Napi??i..."
                       className="bg-transparent outline-none text-sm text-white/90 placeholder:text-white/40 w-44"
                       maxLength={80}
                     />
@@ -1073,7 +1073,7 @@ function Game({ state, playerId, socket }) {
                       onClick={sendChat}
                       className="rounded-lg bg-white/10 hover:bg-white/15 px-2 py-1 text-xs text-white/90 transition"
                     >
-                      Po?íalji
+                      Po?alji
                     </button>
                   </div>
                 </div>
@@ -1101,9 +1101,9 @@ function Game({ state, playerId, socket }) {
                     {bubbles[byRel[2].id].text}
                   </div>
                 ) : null}
-                <div className="text-white/80 text-sm font-semibold">{byRel[2]?.name || "?Çö"}</div>
+                <div className="text-white/80 text-sm font-semibold">{byRel[2]?.name || "???"}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {byRel[2] ? getHandCount(byRel[2].id) : 0} ?Çó {byRel[2] ? teamLabel(byRel[2].team, roomPlayers) : ""}
+                  Karte: {byRel[2] ? getHandCount(byRel[2].id) : 0} ??? {byRel[2] ? teamLabel(byRel[2].team, roomPlayers) : ""}
                 </div>
                 {g?.turnSeat === byRel[2]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
@@ -1115,9 +1115,9 @@ function Game({ state, playerId, socket }) {
                     {bubbles[byRel[1].id].text}
                   </div>
                 ) : null}
-                <div className="text-white/80 text-sm font-semibold">{byRel[1]?.name || "?Çö"}</div>
+                <div className="text-white/80 text-sm font-semibold">{byRel[1]?.name || "?"}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {byRel[1] ? getHandCount(byRel[1].id) : 0} ?Çó {byRel[1] ? teamLabel(byRel[1].team, roomPlayers) : ""}
+                  Karte: {byRel[1] ? getHandCount(byRel[1].id) : 0} ? {byRel[1] ? teamLabel(byRel[1].team, roomPlayers) : ""}
                 </div>
                 {g?.turnSeat === byRel[1]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
@@ -1129,9 +1129,9 @@ function Game({ state, playerId, socket }) {
                     {bubbles[byRel[3].id].text}
                   </div>
                 ) : null}
-                <div className="text-white/80 text-sm font-semibold">{byRel[3]?.name || "?Çö"}</div>
+                <div className="text-white/80 text-sm font-semibold">{byRel[3]?.name || "?"}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {byRel[3] ? getHandCount(byRel[3].id) : 0} ?Çó {byRel[3] ? teamLabel(byRel[3].team, roomPlayers) : ""}
+                  Karte: {byRel[3] ? getHandCount(byRel[3].id) : 0} ? {byRel[3] ? teamLabel(byRel[3].team, roomPlayers) : ""}
                 </div>
                 {g?.turnSeat === byRel[3]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
@@ -1157,7 +1157,7 @@ function Game({ state, playerId, socket }) {
                   <div>
                     <div className="text-white/90 font-semibold">{byRel[0]?.name || "Vi"}</div>
                     <div className="text-xs text-white/60">
-                      Karte: {myHand.length} ?Çó {myTeamLabel}
+                      Karte: {myHand.length} ??? {myTeamLabel}
                     </div>
                   </div>
                   <div className="flex items-end gap-3">
@@ -1165,7 +1165,7 @@ function Game({ state, playerId, socket }) {
                       type="button"
                       onClick={() => setShowCaptured(true)}
                       className="group flex items-center gap-2 rounded-xl bg-black/20 ring-1 ring-white/10 px-3 py-2 text-xs text-white/80 hover:bg-black/30 transition"
-                      title="Prika??i no?íene karte"
+                      title="Prika?i no?ene karte"
                     >
                       <div className="relative">
                         {myCapturedTop ? <Card card={myCapturedTop} compact /> : <CardBack compact />}
@@ -1174,7 +1174,7 @@ function Game({ state, playerId, socket }) {
                         </div>
                       </div>
                       <div className="text-left">
-                        <div className="font-semibold leading-tight">Na?íe karte</div>
+                        <div className="font-semibold leading-tight">Na??e karte</div>
                         <div className="text-white/60 leading-tight">klik za pregled</div>
                       </div>
                     </button>
@@ -1197,7 +1197,7 @@ function Game({ state, playerId, socket }) {
                       <CardBack />
                     </div>
                   ))}
-                  {myHand.length === 0 ? <div className="text-white/70 text-sm">Nemate karata (?ìekanje deljenja)...</div> : null}
+                  {myHand.length === 0 ? <div className="text-white/70 text-sm">Nemate karata (?ekanje deljenja)...</div> : null}
                 </div>
               </div>
             </div>
@@ -1208,7 +1208,7 @@ function Game({ state, playerId, socket }) {
             <div className="text-sm font-semibold">Rezultat</div>
             {state?.match ? (
               <div className="mt-2 text-xs text-white/70">
-                Ukupno do {state.match.target}: <span className="font-semibold">{teamNames.A} {state.match.totals.A}</span> ?Çó{" "}
+                Ukupno do {state.match.target}: <span className="font-semibold">{teamNames.A} {state.match.totals.A}</span> ?{" "}
                 <span className="font-semibold">{teamNames.B} {state.match.totals.B}</span>
               </div>
             ) : null}
@@ -1217,21 +1217,21 @@ function Game({ state, playerId, socket }) {
                 <div className="text-xs text-white/60">{teamNames.A}</div>
                 <div className="mt-1 text-lg font-semibold">{g?.captures?.A?.total ?? 0}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {g?.captures?.A?.cardsCount ?? 0} ?Çó Zinga: {g?.captures?.A?.zinga10 ?? 0} ?Çó ??andar: {g?.captures?.A?.zinga20 ?? 0}
+                  Karte: {g?.captures?.A?.cardsCount ?? 0} ??? Zinga: {g?.captures?.A?.zinga10 ?? 0} ??? ??andar: {g?.captures?.A?.zinga20 ?? 0}
                 </div>
               </div>
               <div className={["rounded-2xl p-3 ring-1", myTeam === "B" ? "bg-emerald-400/10 ring-emerald-400/20" : "bg-black/20 ring-white/10"].join(" ")}>
                 <div className="text-xs text-white/60">{teamNames.B}</div>
                 <div className="mt-1 text-lg font-semibold">{g?.captures?.B?.total ?? 0}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {g?.captures?.B?.cardsCount ?? 0} ?Çó Zinga: {g?.captures?.B?.zinga10 ?? 0} ?Çó ??andar: {g?.captures?.B?.zinga20 ?? 0}
+                  Karte: {g?.captures?.B?.cardsCount ?? 0} ? Zinga: {g?.captures?.B?.zinga10 ?? 0} ? ?andar: {g?.captures?.B?.zinga20 ?? 0}
                 </div>
               </div>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-white/70">
               <div className="rounded-2xl bg-black/20 ring-1 ring-white/10 p-3">
-                <div className="text-white/60">?ápil</div>
+                <div className="text-white/60">?pil</div>
                 <div className="mt-1 font-semibold text-white">{g?.deckCount ?? 0}</div>
                 {g?.deckCount === 0 ? <div className="mt-1 text-[11px] text-red-200 font-semibold">Poslednje deljenje</div> : null}
               </div>
@@ -1274,7 +1274,7 @@ export default function App() {
     const s = createSocket();
     socketRef.current = s;
     s.on("state", (next) => setState(next));
-    s.on("connect_error", () => setError("Ne mogu da se pove??em sa serverom."));
+    s.on("connect_error", () => setError("Ne mogu da se pove?em sa serverom."));
     s.on("history", (history) => {
       setState((prev) => ({ ...prev, matchHistory: history }));
     });
@@ -1288,7 +1288,7 @@ export default function App() {
     s.emit("room:join", { roomId, name }, (res) => {
       setJoining(false);
       if (!res?.ok) {
-        setError(res?.error || "Gre?íka.");
+        setError(res?.error || "Gre?ka.");
         return;
       }
       setPlayerId(res.playerId);
@@ -1313,7 +1313,7 @@ export default function App() {
   if (!state) {
     return (
       <div className="min-h-screen flex items-center justify-center text-white/70">
-        U?ìitavanje stanja...
+        U??itavanje stanja...
       </div>
     );
   }
