@@ -348,7 +348,7 @@ function CenterFx({ fx }) {
   );
 }
 
-function TalonStack({ count, topCard, seed, hideTop }) {
+function TalonStack({ count, topCard, seed, hideTop, ghostCard }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   
   useEffect(() => {
@@ -386,8 +386,21 @@ function TalonStack({ count, topCard, seed, hideTop }) {
   }
 
   return (
-    <div className="relative w-[200px] h-[180px] sm:w-[220px] sm:h-[200px] md:w-[280px] md:h-[260px]">
+    <div className="relative w-[200px] h-[180px] sm:w-[220px] sm:h-[200px] md:w-[280px] md-h-[260px]">
       {layers}
+      {/* Ghost card - faded outline of last taken card */}
+      {ghostCard && !hideTop && (
+        <div
+          className="absolute left-1/2 top-1/2 pointer-events-none z-5"
+          style={{
+            transform: "translate(-50%, -50%)",
+            opacity: 0.25,
+            filter: "blur(1px) grayscale(0.8)"
+          }}
+        >
+          <Card card={ghostCard} compact={isMobile} />
+        </div>
+      )}
       <div className="absolute left-1/2 top-[78%] -translate-x-1/2 text-xs text-white/80 bg-black/35 ring-1 ring-white/10 rounded-full px-3 py-1">
         Talon: {n}
       </div>
@@ -821,6 +834,7 @@ function Game({ state, playerId, socket }) {
   const [hideTalonTopDuringDeal, setHideTalonTopDuringDeal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const [glassShakePlayerId, setGlassShakePlayerId] = useState(null);
+  const [ghostCard, setGhostCard] = useState(null); // {card, id} - last taken card ghost
   
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -968,7 +982,17 @@ function Game({ state, playerId, socket }) {
         toSeat: a.fromSeat, // Cards go to the player who took them
         cardCount: estimatedCount
       });
+      
+      // Show ghost card effect - the last card that was taken
+      setGhostCard({ card: a.card, id: a.id });
+      // Remove ghost after 1.5 seconds
+      const ghostTimeout = setTimeout(() => setGhostCard(null), 1500);
+      return () => clearTimeout(ghostTimeout);
+    } else {
+      // Clear ghost when new card is dropped
+      setGhostCard(null);
     }
+  }, [g?.lastAction?.id, mySeat]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Zinga FX
     if (a.zinga === 10) {
@@ -1353,6 +1377,7 @@ function Game({ state, playerId, socket }) {
                     topCard={isDealing && hideTalonTopDuringDeal ? null : g?.tableTop ?? null}
                     seed={(Number(g?.lastAction?.id || 1) * 13) ^ (g?.tableCount ?? 0)}
                     hideTop={Boolean(flying?.hideTop && g?.tableTop?.id === flying?.card?.id)}
+                    ghostCard={ghostCard?.card}
                   />
                 </div>
               </div>
