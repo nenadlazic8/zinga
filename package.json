@@ -1,0 +1,13 @@
+{
+  "name": "zinga",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd client && npm install && npm run build",
+    "install": "cd server && npm install && cd ../client && npm install",
+    "start": "cd server && node src/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

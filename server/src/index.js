@@ -11,10 +11,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
-const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
+// For Railway: allow same origin (frontend and backend on same domain)
+const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "*";
 
 const app = express();
-app.use(cors({ origin: CLIENT_ORIGIN, credentials: true }));
+app.use(cors({ 
+  origin: CLIENT_ORIGIN === "*" ? true : CLIENT_ORIGIN, 
+  credentials: true 
+}));
 
 // Serve static files from client/dist (if it exists)
 app.use(express.static(join(__dirname, '../../client/dist')));
@@ -23,7 +27,10 @@ app.get("/health", (_req, res) => res.json({ ok: true, name: "zinga-server" }));
 
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: CLIENT_ORIGIN, credentials: true }
+  cors: { 
+    origin: CLIENT_ORIGIN === "*" ? true : CLIENT_ORIGIN, 
+    credentials: true 
+  }
 });
 
 /**
