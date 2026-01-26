@@ -123,7 +123,7 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
     hands,
     turnSeat: startSeat,
     dealSeat: startSeat,
-    deckOwnerSeat: (startSeat - 1 + 4) % 4, // Previous player in counter-clockwise order (will get last card)
+    deckOwnerSeat: (startSeat - 2 + 4) % 4, // Two seats behind first player in counter-clockwise order (will get last card)
     lastTakerPlayerId: null,
     lastAction: null,
     lastDeal: { id: 0, isLast: false, round: 1, hand: room.match?.hand ?? null },
