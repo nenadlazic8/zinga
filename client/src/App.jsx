@@ -429,7 +429,7 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
 
 // (removed) TableDecor: props are now user-selected via "Uzmi pi?e"
 
-function PlayerPropsLayer({ mySeat, players }) {
+function PlayerPropsLayer({ mySeat, players, glassShakePlayerId }) {
   // Deterministic jitter so all clients see same placements
   function hashString(s) {
     let h = 2166136261;
@@ -475,6 +475,7 @@ function PlayerPropsLayer({ mySeat, players }) {
     const drink = p.drink || null;
     const hasGlass = Boolean(p.glass);
     const hasCig = Boolean(p.cigarette);
+    const shouldShakeGlass = glassShakePlayerId === p.id && hasGlass;
 
     const drinkPos = drink ? { x: b.x + rv.x * 15 + dx, y: b.y + rv.y * 15 + dy } : null;
 
@@ -508,7 +509,7 @@ function PlayerPropsLayer({ mySeat, players }) {
           key={`glass-${p.id}`}
           src={imgCasa}
           alt=""
-          className="absolute pointer-events-none opacity-85 drop-shadow-[0_18px_22px_rgba(0,0,0,0.55)]"
+          className={`absolute pointer-events-none opacity-85 drop-shadow-[0_18px_22px_rgba(0,0,0,0.55)] ${shouldShakeGlass ? 'animate-shake' : ''}`}
           style={{
             left: `${glassPos.x}%`,
             top: `${glassPos.y}%`,
