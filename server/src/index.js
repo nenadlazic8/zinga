@@ -191,6 +191,7 @@ function endGame(room) {
     if (aTotal >= target || bTotal >= target) {
       if (aTotal > bTotal) winner = "A";
       else if (bTotal > aTotal) winner = "B";
+      else winner = aTotal >= target ? "A" : "B"; // If tied, first to reach target wins
     }
 
     if (winner) {
@@ -319,6 +320,25 @@ function applyPlay(room, playerId, cardId) {
     const team = teamForSeat(player.seat);
     g.captures[team].cards.push(...taken);
     g.lastTakerPlayerId = playerId;
+    
+    // Check if game should end immediately (101+ points reached)
+    if (room.match) {
+      // Calculate current hand scores
+      const aHand = computeTeamScore(g.captures.A);
+      const bHand = computeTeamScore(g.captures.B);
+      
+      // Calculate totals including current hand
+      const aTotal = room.match.totals.A + aHand.total;
+      const bTotal = room.match.totals.B + bHand.total;
+      const target = room.match.target;
+      
+      // If any team reached target, end game immediately
+      if (aTotal >= target || bTotal >= target) {
+        // End the current hand first to calculate final scores properly
+        endGame(room);
+        return; // endGame already broadcasts, so we can return
+      }
+    }
   }
 
   // Emit last action for client animations/FX
