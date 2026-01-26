@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "cd client && npm install && npm run build",
-    "install": "cd server && npm install && cd ../client && npm install",
+    "postinstall": "cd server && npm install",
     "start": "cd server && node src/index.js"
   },
   "engines": {
