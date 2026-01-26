@@ -478,9 +478,50 @@ io.on("connection", (socket) => {
       if (!safeName) throw new Error("Unesite ime.");
 
       const room = getOrCreateRoom(safeRoomId);
-      if (room.phase !== "lobby") throw new Error("Igra je već u toku ili završena.");
+      
+      // Check if game is in progress and try to reconnect existing player
+      if (room.phase !== "lobby") {
+        // Game is in progress - check if player with this name exists
+        const existingPlayer = room.players.find((p) => p.name === safeName);
+        if (existingPlayer) {
+          // Reconnect existing player
+          existingPlayer.socketId = socket.id;
+          existingPlayer.connected = true;
+          
+          socket.data.roomId = safeRoomId;
+          socket.data.playerId = existingPlayer.id;
+          socket.join(safeRoomId);
+          
+          // Broadcast updated state to all players
+          broadcastRoom(room);
+          ack?.({ ok: true, playerId: existingPlayer.id, roomId: safeRoomId, reconnected: true });
+          return;
+        } else {
+          // Player with this name doesn't exist - can't join game in progress
+          throw new Error("Igra je već u toku. Možete se reconnect-ovati samo sa istim imenom.");
+        }
+      }
+      
+      // Lobby phase - normal join logic
       if (room.players.length >= 4) throw new Error("Soba je puna.");
 
+      // Check if player with this name already exists in lobby
+      const existingPlayer = room.players.find((p) => p.name === safeName);
+      if (existingPlayer) {
+        // Reconnect existing player in lobby
+        existingPlayer.socketId = socket.id;
+        existingPlayer.connected = true;
+        
+        socket.data.roomId = safeRoomId;
+        socket.data.playerId = existingPlayer.id;
+        socket.join(safeRoomId);
+        
+        broadcastRoom(room);
+        ack?.({ ok: true, playerId: existingPlayer.id, roomId: safeRoomId, reconnected: true });
+        return;
+      }
+
+      // New player joining lobby
       const usedSeats = new Set(room.players.map((p) => p.seat));
       let seat = 0;
       while (usedSeats.has(seat) && seat < 4) seat++;
@@ -501,12 +542,6 @@ io.on("connection", (socket) => {
       socket.data.roomId = safeRoomId;
       socket.data.playerId = playerId;
       socket.join(safeRoomId);
-      
-      // Mark player as connected
-      const player = findPlayer(room, playerId);
-      if (player) {
-        player.connected = true;
-      }
 
       if (room.players.length === 4) {
         startGame(room);
@@ -677,18 +712,16 @@ io.on("connection", (socket) => {
     p.connected = false;
 
     // Basic behavior:
-    // - If still in lobby: remove player so someone else can join.
-    // - If game is playing: only abort if ALL players are disconnected
+    // - If still in lobby: remove player so someone else can join (they can reconnect with same name).
+    // - If game is playing: mark as disconnected but don't remove (they can reconnect with same name).
+    // - Only abort if ALL players are disconnected for a while (handled elsewhere if needed).
     if (room.phase === "lobby") {
+      // In lobby, remove disconnected player (they can reconnect with same name)
       room.players = room.players.filter((x) => x.id !== playerId);
       if (room.players.length === 0) rooms.delete(roomId);
-    } else if (room.phase === "playing") {
-      // Only abort if all players are disconnected
-      const allDisconnected = room.players.every((pl) => !pl.connected);
-      if (allDisconnected) {
-        room.phase = "aborted";
-        room.game?.log?.push("Igra je prekinuta (svi igrači su se diskonektovali).");
-      }
+    } else if (room.phase === "playing" || room.phase === "finished") {
+      // In game, keep player but mark as disconnected (they can reconnect)
+      // Don't abort immediately - give them chance to reconnect
     }
 
     if (rooms.has(roomId)) broadcastRoom(room);
