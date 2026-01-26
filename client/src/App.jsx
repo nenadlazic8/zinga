@@ -267,17 +267,21 @@ function CenterFx({ fx }) {
 
   if (!fx) return null;
 
+  const isZinga = fx.kind === "zinga";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
       <div
         className={[
           "rounded-2xl px-6 py-4 ring-1 shadow-2xl",
-          fx.kind === "zinga" ? "bg-yellow-300 text-black ring-yellow-200/50" : "bg-red-500 text-white ring-white/20",
+          isZinga ? "bg-gradient-to-br from-yellow-300 to-yellow-400 text-black ring-yellow-200/50" : "bg-red-500 text-white ring-white/20",
           "transition-all duration-300",
           show ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 -translate-y-6"
         ].join(" ")}
       >
-        <div className="text-2xl font-extrabold tracking-wide">{fx.title}</div>
+        <div className={`text-2xl font-extrabold tracking-wide ${isZinga ? 'animate-pulse-gold' : ''}`}>
+          {fx.title}
+        </div>
         {fx.subtitle ? <div className="text-sm opacity-80 mt-1">{fx.subtitle}</div> : null}
       </div>
     </div>
@@ -752,6 +756,7 @@ function Game({ state, playerId, socket }) {
   const [talonDisplayCount, setTalonDisplayCount] = useState(g?.tableCount ?? 0);
   const [hideTalonTopDuringDeal, setHideTalonTopDuringDeal] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const [glassShakePlayerId, setGlassShakePlayerId] = useState(null);
   
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -943,6 +948,11 @@ function Game({ state, playerId, socket }) {
         setActionError(res?.error || "Gre?ka.");
         return;
       }
+      // Trigger glass shake animation if glass was selected
+      if (propsGlass) {
+        setGlassShakePlayerId(playerId);
+        setTimeout(() => setGlassShakePlayerId(null), 500);
+      }
       setShowProps(false);
     });
   }
@@ -954,8 +964,19 @@ function Game({ state, playerId, socket }) {
     socket.emit("chat:send", { text });
   }
 
+  const [screenShake, setScreenShake] = useState(false);
+  
+  // Trigger screen shake when Zinga happens
+  useEffect(() => {
+    if (fx?.kind === "zinga") {
+      setScreenShake(true);
+      const t = setTimeout(() => setScreenShake(false), 500);
+      return () => clearTimeout(t);
+    }
+  }, [fx?.id, fx?.kind]);
+
   return (
-    <div className="min-h-screen p-4">
+    <div className={`min-h-screen p-4 ${screenShake ? 'animate-shake-screen' : ''}`}>
       <CenterFx fx={fx} />
       {showProps ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1078,7 +1099,7 @@ function Game({ state, playerId, socket }) {
             ].join(" ")}
           >
             <div className="absolute inset-0 bg-black/35" />
-            <PlayerPropsLayer mySeat={mySeat} players={roomPlayers} />
+            <PlayerPropsLayer mySeat={mySeat} players={roomPlayers} glassShakePlayerId={glassShakePlayerId} />
             <DeckStack
               mySeat={mySeat}
               deckOwnerSeat={g?.deckOwnerSeat ?? 0}
