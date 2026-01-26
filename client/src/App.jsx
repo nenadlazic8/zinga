@@ -317,8 +317,8 @@ function CenterFx({ fx }) {
     if (!fx) return;
     setShow(false);
     const raf = requestAnimationFrame(() => setShow(true));
-    const dur = fx.durationMs ?? (fx.kind === "deal" ? 2000 : fx.kind === "round" ? 1400 : 1400);
-    const t = setTimeout(() => setShow(false), Math.min(dur, 2000));
+    const dur = fx.durationMs ?? (fx.kind === "deal" ? 2000 : fx.kind === "zinga" ? 2000 : fx.kind === "round" ? 1400 : 1400);
+    const t = setTimeout(() => setShow(false), dur);
     return () => {
       cancelAnimationFrame(raf);
       clearTimeout(t);
@@ -339,7 +339,7 @@ function CenterFx({ fx }) {
           show ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 -translate-y-6"
         ].join(" ")}
       >
-        <div className={`text-2xl font-extrabold tracking-wide ${isZinga ? 'animate-pulse-gold' : ''}`}>
+        <div className={`text-2xl font-extrabold tracking-wide ${isZinga ? 'animate-pulse-blue' : ''}`}>
           {fx.title}
         </div>
         {fx.subtitle ? <div className="text-sm opacity-80 mt-1">{fx.subtitle}</div> : null}

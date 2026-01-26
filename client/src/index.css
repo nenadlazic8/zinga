@@ -70,15 +70,15 @@ body,
   90% { transform: translate(-3px, -2px); }
 }
 
-@keyframes pulse-gold {
+@keyframes pulse-blue {
   0%, 100% { 
-    color: #fbbf24;
-    text-shadow: 0 0 10px rgba(251, 191, 36, 0.5), 0 0 20px rgba(251, 191, 36, 0.3);
+    color: #1e3a8a;
+    text-shadow: 0 0 10px rgba(30, 58, 138, 0.5), 0 0 20px rgba(30, 58, 138, 0.3);
     transform: scale(1);
   }
   50% { 
-    color: #fcd34d;
-    text-shadow: 0 0 20px rgba(252, 211, 77, 0.8), 0 0 30px rgba(252, 211, 77, 0.5);
+    color: #3b82f6;
+    text-shadow: 0 0 20px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.5);
     transform: scale(1.05);
   }
 }
@@ -91,6 +91,6 @@ body,
   animation: shake-screen 0.5s ease-in-out;
 }
 
-.animate-pulse-gold {
-  animation: pulse-gold 1.5s ease-in-out infinite;
+.animate-pulse-blue {
+  animation: pulse-blue 2s ease-in-out infinite;
 }
