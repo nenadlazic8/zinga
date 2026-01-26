@@ -1020,6 +1020,16 @@ function Game({ state, playerId, socket }) {
     setPropsCig(Boolean(meNow.cigarette));
   }, [roomPlayers, playerId]);
 
+  // Helper function to check if text is only emoji(s)
+  function isOnlyEmoji(text) {
+    if (!text || text.trim().length === 0) return false;
+    // Remove whitespace and check if remaining is only emoji
+    const cleaned = text.trim();
+    // Unicode emoji ranges: https://stackoverflow.com/questions/18862256/how-to-detect-emoji-using-regular-expression
+    const emojiRegex = /^[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2190}-\u{21FF}\u{2300}-\u{23FF}\u{2B50}\u{2B55}\u{3030}\u{303D}\u{3297}\u{3299}\u{FE00}-\u{FE0F}\u{1F004}\u{1F0CF}\u{1F170}-\u{1F251}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]+$/u;
+    return emojiRegex.test(cleaned);
+  }
+
   // Chat bubbles
   useEffect(() => {
     if (!socket) return;
@@ -1035,7 +1045,7 @@ function Game({ state, playerId, socket }) {
           delete next[msg.playerId];
           return next;
         });
-      }, 4600);
+      }, 5000); // Changed to 5 seconds
     };
     socket.on("chat:bubble", handler);
     return () => socket.off("chat:bubble", handler);
@@ -1300,7 +1310,7 @@ function Game({ state, playerId, socket }) {
                     className="sm:hidden rounded-xl bg-black/35 hover:bg-black/45 ring-1 ring-white/10 px-3 py-2 text-sm text-white/90 transition"
                     title="Chat"
                   >
-                    ??
+                    Chat
                   </button>
                 </div>
               </div>
@@ -1334,7 +1344,11 @@ function Game({ state, playerId, socket }) {
               {/* Top (partner) */}
               <div className="absolute top-4 left-1/2 -translate-x-1/2 text-center">
                 {byRel[2]?.id && bubbles[byRel[2].id]?.text ? (
-                  <div className="mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-xs text-white/90">
+                  <div className={`mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-white/90 animate-chat-fade-out ${
+                    isOnlyEmoji(bubbles[byRel[2].id].text) 
+                      ? "text-2xl translate-x-2" 
+                      : "text-xs"
+                  }`}>
                     {bubbles[byRel[2].id].text}
                   </div>
                 ) : null}
@@ -1348,7 +1362,11 @@ function Game({ state, playerId, socket }) {
               {/* Left opponent */}
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-left">
                 {byRel[1]?.id && bubbles[byRel[1].id]?.text ? (
-                  <div className="mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-xs text-white/90">
+                  <div className={`mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-white/90 animate-chat-fade-out ${
+                    isOnlyEmoji(bubbles[byRel[1].id].text) 
+                      ? "text-2xl -translate-x-2" 
+                      : "text-xs"
+                  }`}>
                     {bubbles[byRel[1].id].text}
                   </div>
                 ) : null}
@@ -1362,7 +1380,11 @@ function Game({ state, playerId, socket }) {
               {/* Right opponent */}
               <div className="absolute right-4 top-1/2 -translate-y-1/2 text-right">
                 {byRel[3]?.id && bubbles[byRel[3].id]?.text ? (
-                  <div className="mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-xs text-white/90">
+                  <div className={`mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-white/90 animate-chat-fade-out ${
+                    isOnlyEmoji(bubbles[byRel[3].id].text) 
+                      ? "text-2xl translate-x-2" 
+                      : "text-xs"
+                  }`}>
                     {bubbles[byRel[3].id].text}
                   </div>
                 ) : null}
@@ -1393,6 +1415,15 @@ function Game({ state, playerId, socket }) {
               <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[min(820px,92%)]">
                 <div className="flex items-end justify-between mb-2">
                   <div>
+                    {byRel[0]?.id && bubbles[byRel[0].id]?.text ? (
+                      <div className={`mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-white/90 animate-chat-fade-out ${
+                        isOnlyEmoji(bubbles[byRel[0].id].text) 
+                          ? "text-2xl translate-x-2" 
+                          : "text-xs"
+                      }`}>
+                        {bubbles[byRel[0].id].text}
+                      </div>
+                    ) : null}
                     <div className="text-white/90 font-semibold">{byRel[0]?.name || "Vi"}</div>
                     <div className="text-xs text-white/60">
                       Karte: {myHand.length} ? {myTeamLabel}

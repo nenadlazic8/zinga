@@ -94,3 +94,41 @@ body,
 .animate-pulse-blue {
   animation: pulse-blue 2s ease-in-out infinite;
 }
+
+@keyframes chat-fade-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  90% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+}
+
+.animate-chat-fade-out {
+  animation: chat-fade-out 5s ease-out forwards;
+}
+
+@keyframes chat-fade-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  90% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+  }
+}
+
+.animate-chat-fade-out {
+  animation: chat-fade-out 5s ease-out forwards;
+}
