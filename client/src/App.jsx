@@ -1217,7 +1217,7 @@ function Game({ state, playerId, socket }) {
                 <div className="text-xs text-white/60">{teamNames.A}</div>
                 <div className="mt-1 text-lg font-semibold">{g?.captures?.A?.total ?? 0}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {g?.captures?.A?.cardsCount ?? 0} ??? Zinga: {g?.captures?.A?.zinga10 ?? 0} ??? ??andar: {g?.captures?.A?.zinga20 ?? 0}
+                  Karte: {g?.captures?.A?.cardsCount ?? 0} ? Zinga: {g?.captures?.A?.zinga10 ?? 0} ? ?andar: {g?.captures?.A?.zinga20 ?? 0}
                 </div>
               </div>
               <div className={["rounded-2xl p-3 ring-1", myTeam === "B" ? "bg-emerald-400/10 ring-emerald-400/20" : "bg-black/20 ring-white/10"].join(" ")}>

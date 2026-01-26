@@ -3,9 +3,21 @@
 @tailwind utilities;
 
 /* Slightly nicer default font smoothing */
-html {
+html,
+body {
+  margin: 0;
+  padding: 0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Global background for the entire app */
+html,
+body,
+#root {
+  background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+  min-height: 100vh;
+  color: white;
 }
 
 /* Table surface: green felt */
