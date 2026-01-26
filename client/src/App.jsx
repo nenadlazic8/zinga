@@ -1302,7 +1302,7 @@ export default function App() {
       // Don't clear state on intentional disconnects or reconnection attempts
       if (reason === "io server disconnect" || reason === "transport close") {
         // Server or network issue - keep state but show error
-        setError("Konekcija sa serverom je prekinuta. Poku?avam ponovo...");
+        setError("Konekcija sa serverom je prekinuta. Pokusavam ponovo...");
         // Try to reconnect
         setTimeout(() => {
           if (socketRef.current && !socketRef.current.connected) {

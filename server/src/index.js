@@ -33,9 +33,11 @@ app.get("/health", (_req, res) => res.json({ ok: true, name: "zinga-server" }));
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { 
-    origin: CLIENT_ORIGIN === "*" ? true : CLIENT_ORIGIN, 
-    credentials: true 
-  }
+    origin: CLIENT_ORIGIN === "*" ? "*" : CLIENT_ORIGIN, 
+    credentials: true,
+    methods: ["GET", "POST"]
+  },
+  allowEIO3: true
 });
 
 /**
