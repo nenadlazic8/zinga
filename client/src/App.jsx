@@ -227,7 +227,7 @@ function GameOver({ match, players, socket, playerId, roomId, onLeave, history }
                   : "bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg hover:shadow-xl"
               ].join(" ")}
             >
-              {rematchClicked ? `??ekam ostale... (${readyCount}/4)` : "Revan??"}
+              {rematchClicked ? `Cekam ostale... (${readyCount}/4)` : "Revans"}
             </button>
             <button
               onClick={handleLeave}
@@ -239,7 +239,7 @@ function GameOver({ match, players, socket, playerId, roomId, onLeave, history }
                   : "bg-gray-600 hover:bg-gray-700 text-white shadow-lg hover:shadow-xl"
               ].join(" ")}
             >
-              {leaveClicked ? "Izlazim..." : "Iza?i iz igre"}
+              {leaveClicked ? "Izlazim..." : "Izadji iz igre"}
             </button>
           </div>
           {readyCount > 0 && readyCount < 4 && rematchClicked && (
@@ -589,7 +589,7 @@ function CapturedCardsModal({ open, onClose, title, cards }) {
               ))}
             </div>
           ) : (
-            <div className="text-sm text-white/70">Jo? uvek niste nosili karte.</div>
+            <div className="text-sm text-white/70">Jos uvek niste nosili karte.</div>
           )}
         </div>
       </div>
@@ -606,7 +606,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-2xl font-semibold">Zinga</div>
-            <div className="text-white/70 text-sm mt-1">Online karta??ka igra 2v2 (osnovni engine)</div>
+            <div className="text-white/70 text-sm mt-1">Online kartaska igra 2v2 (osnovni engine)</div>
           </div>
           <div className="text-xs text-white/60">UI: srpski</div>
         </div>
@@ -649,8 +649,8 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
 
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Igra??i u sobi</div>
-            <div className="text-xs text-white/60">Igra kre?e kada se pove?u 4 igra?a.</div>
+            <div className="text-sm font-semibold">Igrac i u sobi</div>
+            <div className="text-xs text-white/60">Igra krece kada se povezu 4 igraca.</div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
             {Array.from({ length: 4 }).map((_, i) => {
@@ -685,11 +685,11 @@ function WaitingRoom({ state, playerId }) {
               Povezani ste{me ? ` kao ${me.name} (mesto ${me.seat + 1})` : ""}. Soba: <span className="font-semibold">{state.roomId}</span>
             </div>
           </div>
-          <SeatBadge label={missing === 0 ? "Start" : `?eka se jo?: ${missing}`} active={missing === 0} />
+          <SeatBadge label={missing === 0 ? "Start" : `Ceka se jos: ${missing}`} active={missing === 0} />
         </div>
 
         <div className="mt-5 text-sm text-white/70">
-          Igra po??inje automatski kada se pove??u 4 igra??a. Timovi su fiksni: Tim A (1 i 3), Tim B (2 i 4).
+          Igra pocinje automatski kada se povezu 4 igraca. Timovi su fiksni: Tim A (1 i 3), Tim B (2 i 4).
         </div>
 
         <div className="mt-6">
@@ -793,7 +793,7 @@ function Game({ state, playerId, socket }) {
 
     // FX
     if (deal.isLast) {
-      setFx({ id: deal.id, kind: "deal", title: "POSLEDNJE DELJENJE", subtitle: "Nema vi?e karata u ?pilu", durationMs: 2000 });
+      setFx({ id: deal.id, kind: "deal", title: "POSLEDNJE DELJENJE", subtitle: "Nema vise karata u spilu", durationMs: 2000 });
     } else if (isInitial && (deal.hand ?? 1) > 1) {
       setFx({ id: deal.id, kind: "round", title: "NOVA RUNDA", subtitle: `Ruka ${deal.hand}`, durationMs: 1400 });
     }
@@ -870,7 +870,7 @@ function Game({ state, playerId, socket }) {
     if (a.zinga === 10) {
       setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
     } else if (a.zinga === 20) {
-      setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ?ANDARA! +20", subtitle: a.playerName });
+      setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ZANDARA! +20", subtitle: a.playerName });
     }
   }, [g?.lastAction?.id, mySeat]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -941,8 +941,8 @@ function Game({ state, playerId, socket }) {
           <div className="relative w-full max-w-lg rounded-2xl bg-neutral-950 ring-1 ring-white/10 p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="text-lg font-semibold">Uzmi pi?e</div>
-                <div className="text-xs text-white/60">Svi vide ?ta si uzeo.</div>
+                <div className="text-lg font-semibold">Uzmi pice</div>
+                <div className="text-xs text-white/60">Svi vide sta si uzeo.</div>
               </div>
               <button
                 type="button"
@@ -977,12 +977,12 @@ function Game({ state, playerId, socket }) {
 
             <label className="mt-4 flex items-center gap-2 text-sm text-white/80 select-none">
               <input type="checkbox" checked={propsGlass} onChange={(e) => setPropsGlass(e.target.checked)} />
-              ?elim ?a?u
+              Zelim casu
             </label>
 
             <label className="mt-4 flex items-center gap-2 text-sm text-white/80 select-none">
               <input type="checkbox" checked={propsCig} onChange={(e) => setPropsCig(e.target.checked)} />
-              ?elim cigaretu
+              Zelim cigaretu
             </label>
 
             <div className="mt-4 flex justify-end gap-2">
@@ -991,14 +991,14 @@ function Game({ state, playerId, socket }) {
                 onClick={() => setShowProps(false)}
                 className="rounded-xl bg-white/10 hover:bg-white/15 ring-1 ring-white/10 px-3 py-2 text-sm transition"
               >
-                Otka?i
+                Otkazi
               </button>
               <button
                 type="button"
                 onClick={saveProps}
                 className="rounded-xl bg-emerald-500 text-black hover:bg-emerald-400 px-4 py-2 text-sm font-semibold transition"
               >
-                Sa?uvaj
+                Sacuvaj
               </button>
             </div>
           </div>
@@ -1007,20 +1007,20 @@ function Game({ state, playerId, socket }) {
       <CapturedCardsModal
         open={showCaptured}
         onClose={() => setShowCaptured(false)}
-        title={`No?ene karte (${myTeamLabel})`}
+        title={`Nosene karte (${myTeamLabel})`}
         cards={myCaptured}
       />
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="text-2xl font-semibold">Zinga</div>
-            <SeatBadge label={`Va?? tim: ${myTeamLabel}`} active />
+            <SeatBadge label={`Vas tim: ${myTeamLabel}`} active />
             <span className="text-xs text-white/60">Soba: {state.roomId}</span>
           </div>
           <div className="flex items-center gap-2">
             {state.phase === "playing" ? (
               <SeatBadge
-                label={isMyTurn ? "Na potezu ste" : `Na potezu: ${turnPlayer ? turnPlayer.name : "???"}`}
+                label={isMyTurn ? "Na potezu ste" : `Na potezu: ${turnPlayer ? turnPlayer.name : "?"}`}
                 active={isMyTurn}
               />
             ) : state.phase === "finished" ? (
@@ -1071,7 +1071,7 @@ function Game({ state, playerId, socket }) {
                     onClick={() => setShowProps(true)}
                     className="rounded-xl bg-black/35 hover:bg-black/45 ring-1 ring-white/10 px-3 py-2 text-sm text-white/90 transition"
                   >
-                    Uzmi pi?e
+                    Uzmi pice
                   </button>
                   <div className="flex items-center gap-2 rounded-xl bg-black/35 ring-1 ring-white/10 px-2 py-1">
                     <input
@@ -1089,7 +1089,7 @@ function Game({ state, playerId, socket }) {
                       onClick={sendChat}
                       className="rounded-lg bg-white/10 hover:bg-white/15 px-2 py-1 text-xs text-white/90 transition"
                     >
-                      Po?alji
+                      Posalji
                     </button>
                   </div>
                 </div>
@@ -1117,9 +1117,9 @@ function Game({ state, playerId, socket }) {
                     {bubbles[byRel[2].id].text}
                   </div>
                 ) : null}
-                <div className="text-white/80 text-sm font-semibold">{byRel[2]?.name || "???"}</div>
+                <div className="text-white/80 text-sm font-semibold">{byRel[2]?.name || "?"}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {byRel[2] ? getHandCount(byRel[2].id) : 0} ??? {byRel[2] ? teamLabel(byRel[2].team, roomPlayers) : ""}
+                  Karte: {byRel[2] ? getHandCount(byRel[2].id) : 0} ? {byRel[2] ? teamLabel(byRel[2].team, roomPlayers) : ""}
                 </div>
                 {g?.turnSeat === byRel[2]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
@@ -1190,7 +1190,7 @@ function Game({ state, playerId, socket }) {
                         </div>
                       </div>
                       <div className="text-left">
-                        <div className="font-semibold leading-tight">Na??e karte</div>
+                        <div className="font-semibold leading-tight">Nase karte</div>
                         <div className="text-white/60 leading-tight">klik za pregled</div>
                       </div>
                     </button>
@@ -1213,7 +1213,7 @@ function Game({ state, playerId, socket }) {
                       <CardBack />
                     </div>
                   ))}
-                  {myHand.length === 0 ? <div className="text-white/70 text-sm">Nemate karata (?ekanje deljenja)...</div> : null}
+                  {myHand.length === 0 ? <div className="text-white/70 text-sm">Nemate karata (cekanje deljenja)...</div> : null}
                 </div>
               </div>
             </div>
@@ -1233,14 +1233,14 @@ function Game({ state, playerId, socket }) {
                 <div className="text-xs text-white/60">{teamNames.A}</div>
                 <div className="mt-1 text-lg font-semibold">{g?.captures?.A?.total ?? 0}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {g?.captures?.A?.cardsCount ?? 0} ? Zinga: {g?.captures?.A?.zinga10 ?? 0} ? ?andar: {g?.captures?.A?.zinga20 ?? 0}
+                  Karte: {g?.captures?.A?.cardsCount ?? 0} ? Zinga: {g?.captures?.A?.zinga10 ?? 0} ? Zandar: {g?.captures?.A?.zinga20 ?? 0}
                 </div>
               </div>
               <div className={["rounded-2xl p-3 ring-1", myTeam === "B" ? "bg-emerald-400/10 ring-emerald-400/20" : "bg-black/20 ring-white/10"].join(" ")}>
                 <div className="text-xs text-white/60">{teamNames.B}</div>
                 <div className="mt-1 text-lg font-semibold">{g?.captures?.B?.total ?? 0}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {g?.captures?.B?.cardsCount ?? 0} ? Zinga: {g?.captures?.B?.zinga10 ?? 0} ? ?andar: {g?.captures?.B?.zinga20 ?? 0}
+                  Karte: {g?.captures?.B?.cardsCount ?? 0} ? Zinga: {g?.captures?.B?.zinga10 ?? 0} ? Zandar: {g?.captures?.B?.zinga20 ?? 0}
                 </div>
               </div>
             </div>
@@ -1290,7 +1290,7 @@ export default function App() {
     const s = createSocket();
     socketRef.current = s;
     s.on("state", (next) => setState(next));
-    s.on("connect_error", () => setError("Ne mogu da se pove?em sa serverom."));
+    s.on("connect_error", () => setError("Ne mogu da se povezem sa serverom."));
     s.on("history", (history) => {
       setState((prev) => ({ ...prev, matchHistory: history }));
     });
@@ -1329,7 +1329,7 @@ export default function App() {
   if (!state) {
     return (
       <div className="min-h-screen flex items-center justify-center text-white/70">
-        U??itavanje stanja...
+        Ucitavanje stanja...
       </div>
     );
   }
