@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createSocket } from "./socket.js";
 import Card from "./components/Card.jsx";
-import imgSpricer from "./assets/spricer-v2.png";
+import imgSpricer from "./assets/spricer.png";
 import imgPivo from "./assets/pivo.png";
 import imgCasa from "./assets/casa.png";
 import imgCigareta from "./assets/cigareta.png";
