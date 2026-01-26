@@ -322,7 +322,7 @@ function TalonStack({ count, topCard, seed, hideTop }) {
   }
 
   return (
-    <div className="relative w-[180px] h-[160px] sm:w-[200px] sm:h-[180px] md:w-[240px] md:h-[220px]">
+    <div className="relative w-[200px] h-[180px] sm:w-[220px] sm:h-[200px] md:w-[280px] md:h-[260px]">
       {layers}
       <div className="absolute left-1/2 top-[78%] -translate-x-1/2 text-xs text-white/80 bg-black/35 ring-1 ring-white/10 rounded-full px-3 py-1">
         Talon: {n}
@@ -386,14 +386,17 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
           zIndex: i
         }}
       >
-        <CardBack />
+        <CardBack compact={isMobile} />
       </div>
     );
   }
 
+  // Use compact size for deck to match peek card
+  const deckSize = isMobile ? "w-10 h-14" : "w-16 h-24";
+  
   return (
     <div className="absolute pointer-events-none" style={{ ...pos, transform: "translate(-50%, -50%)" }}>
-      <div className="relative w-12 h-18 sm:w-14 sm:h-20 md:w-16 md:h-24">
+      <div className={`relative ${deckSize}`}>
         {backLayers}
 
         {/* Peek card (last card of deck) */}
@@ -406,8 +409,8 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
             }}
           >
             {/* Clip so it looks like it is peeking out */}
-            <div className="overflow-hidden h-[48px] sm:h-[56px] md:h-[64px]">
-              <Card card={deckPeekCard} compact={true} />
+            <div className={`overflow-hidden ${isMobile ? "h-[56px]" : "h-[96px]"}`}>
+              <Card card={deckPeekCard} compact={isMobile} />
             </div>
           </div>
         ) : null}
@@ -644,7 +647,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
             "disabled:opacity-60 disabled:cursor-not-allowed transition"
           ].join(" ")}
         >
-          {joining ? "Povezivanje..." : "U?i / napravi sobu"}
+          {joining ? "Povezivanje..." : "Udji / napravi sobu"}
         </button>
 
         <div className="mt-6">
@@ -659,7 +662,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                 <div key={i} className="rounded-xl bg-black/25 ring-1 ring-white/10 p-3">
                   <div className="text-xs text-white/60">Mesto {i + 1}</div>
                   <div className="mt-1 font-semibold">{p ? p.name : "?"}</div>
-                  {p ? <div className="text-xs text-white/60">{teamLabel(p.team, players)}</div> : <div className="text-xs text-white/40">??eka se...</div>}
+                  {p ? <div className="text-xs text-white/60">{teamLabel(p.team, players)}</div> : <div className="text-xs text-white/40">Ceka se...</div>}
                 </div>
               );
             })}
@@ -685,7 +688,7 @@ function WaitingRoom({ state, playerId }) {
               Povezani ste{me ? ` kao ${me.name} (mesto ${me.seat + 1})` : ""}. Soba: <span className="font-semibold">{state.roomId}</span>
             </div>
           </div>
-          <SeatBadge label={missing === 0 ? "Start" : `Ceka se jos: ${missing}`} active={missing === 0} />
+          <SeatBadge label={missing === 0 ? "Start" : `Ceka se mesto: ${missing}`} active={missing === 0} />
         </div>
 
         <div className="mt-5 text-sm text-white/70">
@@ -704,7 +707,7 @@ function WaitingRoom({ state, playerId }) {
                 <div key={i} className="rounded-xl bg-black/25 ring-1 ring-white/10 p-3">
                   <div className="text-xs text-white/60">Mesto {i + 1}</div>
                   <div className="mt-1 font-semibold">{p ? p.name : "?"}</div>
-                  {p ? <div className="text-xs text-white/60">{teamLabel(p.team, players)}</div> : <div className="text-xs text-white/40">??eka se...</div>}
+                  {p ? <div className="text-xs text-white/60">{teamLabel(p.team, players)}</div> : <div className="text-xs text-white/40">Ceka se...</div>}
                 </div>
               );
             })}
@@ -1173,7 +1176,7 @@ function Game({ state, playerId, socket }) {
                   <div>
                     <div className="text-white/90 font-semibold">{byRel[0]?.name || "Vi"}</div>
                     <div className="text-xs text-white/60">
-                      Karte: {myHand.length} ??? {myTeamLabel}
+                      Karte: {myHand.length} ? {myTeamLabel}
                     </div>
                   </div>
                   <div className="flex items-end gap-3">
@@ -1210,7 +1213,7 @@ function Game({ state, playerId, socket }) {
                   ))}
                   {Array.from({ length: Math.max(0, Math.max(myHand.length, 4) - clamp(handRevealCount, 0, myHand.length)) }).map((_, i) => (
                     <div key={`back-${i}`} className="pointer-events-none">
-                      <CardBack />
+                      <CardBack compact={isMobile} />
                     </div>
                   ))}
                   {myHand.length === 0 ? <div className="text-white/70 text-sm">Nemate karata (cekanje deljenja)...</div> : null}
