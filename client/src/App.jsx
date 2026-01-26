@@ -1294,10 +1294,21 @@ export default function App() {
     socketRef.current = s;
     s.on("state", (next) => {
       if (next) {
+        console.log("Received state update:", next.phase, next.players?.length, "players");
         setState(next);
+        setError(""); // Clear any previous errors
+      } else {
+        console.warn("Received null/undefined state");
       }
     });
-    s.on("connect_error", () => setError("Ne mogu da se povezem sa serverom."));
+    s.on("connect", () => {
+      console.log("Socket connected");
+      setError(""); // Clear errors on successful connection
+    });
+    s.on("connect_error", (err) => {
+      console.error("Socket connect error:", err);
+      setError("Ne mogu da se povezem sa serverom.");
+    });
     s.on("disconnect", (reason) => {
       // Don't clear state on intentional disconnects or reconnection attempts
       if (reason === "io server disconnect" || reason === "transport close") {
@@ -1313,7 +1324,7 @@ export default function App() {
       // For other disconnects (like "transport error"), don't clear state immediately
     });
     s.on("history", (history) => {
-      setState((prev) => (prev ? { ...prev, matchHistory: history } : null));
+      setState((prev) => (prev ? { ...prev, matchHistory: history } : prev));
     });
     return s;
   }
@@ -1381,6 +1392,28 @@ export default function App() {
     );
   }
 
-  return <Game state={state} playerId={playerId} socket={socketRef.current} />;
+  // Default: render Game component for "playing" or "finished" phases
+  try {
+    return <Game state={state} playerId={playerId} socket={socketRef.current} />;
+  } catch (err) {
+    console.error("Error rendering Game component:", err);
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white/70">
+        <div className="text-center">
+          <div className="text-xl font-semibold mb-2">Greska pri ucitavanju igre</div>
+          <div className="text-sm text-red-300 mb-4">{err?.message || "Nepoznata greska"}</div>
+          <button
+            onClick={() => {
+              setPlayerId("");
+              setState(null);
+            }}
+            className="mt-4 px-6 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition"
+          >
+            Nazad u lobby
+          </button>
+        </div>
+      </div>
+    );
+  }
 }
 
