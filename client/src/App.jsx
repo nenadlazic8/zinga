@@ -334,7 +334,7 @@ function CenterFx({ fx }) {
       <div
         className={[
           "rounded-2xl px-6 py-4 ring-1 shadow-2xl",
-          isZinga ? "bg-gradient-to-br from-yellow-300 to-yellow-400 text-black ring-yellow-200/50" : "bg-red-500 text-white ring-white/20",
+          isZinga ? "bg-white/95 text-blue-900 ring-blue-300/50" : "bg-red-500 text-white ring-white/20",
           "transition-all duration-300",
           show ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-90 -translate-y-6"
         ].join(" ")}
