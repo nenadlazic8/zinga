@@ -452,7 +452,14 @@ function sanitizeStateFor(room, viewerPlayerId) {
 
 function broadcastRoom(room) {
   for (const p of room.players) {
-    io.to(p.socketId).emit("state", sanitizeStateFor(room, p.id));
+    try {
+      const state = sanitizeStateFor(room, p.id);
+      if (state) {
+        io.to(p.socketId).emit("state", state);
+      }
+    } catch (err) {
+      console.error(`Error broadcasting to player ${p.id}:`, err);
+    }
   }
 }
 

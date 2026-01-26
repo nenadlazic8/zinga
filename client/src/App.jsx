@@ -1298,9 +1298,19 @@ export default function App() {
       }
     });
     s.on("connect_error", () => setError("Ne mogu da se povezem sa serverom."));
-    s.on("disconnect", () => {
-      setError("Konekcija sa serverom je prekinuta.");
-      setState(null);
+    s.on("disconnect", (reason) => {
+      // Don't clear state on intentional disconnects or reconnection attempts
+      if (reason === "io server disconnect" || reason === "transport close") {
+        // Server or network issue - keep state but show error
+        setError("Konekcija sa serverom je prekinuta. Poku?avam ponovo...");
+        // Try to reconnect
+        setTimeout(() => {
+          if (socketRef.current && !socketRef.current.connected) {
+            socketRef.current.connect();
+          }
+        }, 1000);
+      }
+      // For other disconnects (like "transport error"), don't clear state immediately
     });
     s.on("history", (history) => {
       setState((prev) => (prev ? { ...prev, matchHistory: history } : null));
@@ -1340,7 +1350,10 @@ export default function App() {
   if (!state) {
     return (
       <div className="min-h-screen flex items-center justify-center text-white/70">
-        Ucitavanje stanja...
+        <div className="text-center">
+          <div>Ucitavanje stanja...</div>
+          {error && <div className="mt-4 text-sm text-red-300">{error}</div>}
+        </div>
       </div>
     );
   }
