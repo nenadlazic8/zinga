@@ -285,6 +285,14 @@ function CenterFx({ fx }) {
 }
 
 function TalonStack({ count, topCard, seed, hideTop }) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   const n = clamp(count || 0, 0, 999);
   if (!n) return <div className="text-white/80 text-sm">Sto je prazan.</div>;
 
@@ -308,13 +316,13 @@ function TalonStack({ count, topCard, seed, hideTop }) {
           zIndex: z
         }}
       >
-        {isTopLayer && topCard && !hideTop ? <Card card={topCard} /> : <CardBack />}
+        {isTopLayer && topCard && !hideTop ? <Card card={topCard} compact={isMobile} /> : <CardBack compact={isMobile} />}
       </div>
     );
   }
 
   return (
-    <div className="relative w-[240px] h-[220px]">
+    <div className="relative w-[180px] h-[160px] sm:w-[200px] sm:h-[180px] md:w-[240px] md:h-[220px]">
       {layers}
       <div className="absolute left-1/2 top-[78%] -translate-x-1/2 text-xs text-white/80 bg-black/35 ring-1 ring-white/10 rounded-full px-3 py-1">
         Talon: {n}
@@ -324,6 +332,14 @@ function TalonStack({ count, topCard, seed, hideTop }) {
 }
 
 function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   if (!deckCount) return null;
 
   const ownerRel = relativePos(mySeat, deckOwnerSeat ?? 0);
@@ -377,7 +393,7 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
 
   return (
     <div className="absolute pointer-events-none" style={{ ...pos, transform: "translate(-50%, -50%)" }}>
-      <div className="relative w-16 h-24">
+      <div className="relative w-12 h-18 sm:w-14 sm:h-20 md:w-16 md:h-24">
         {backLayers}
 
         {/* Peek card (last card of deck) */}
@@ -390,8 +406,8 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
             }}
           >
             {/* Clip so it looks like it is peeking out */}
-            <div className="overflow-hidden h-[64px]">
-              <Card card={deckPeekCard} />
+            <div className="overflow-hidden h-[48px] sm:h-[56px] md:h-[64px]">
+              <Card card={deckPeekCard} compact={true} />
             </div>
           </div>
         ) : null}
@@ -894,7 +910,7 @@ function Game({ state, playerId, socket }) {
     if (!socket) return;
     setActionError("");
     socket.emit("game:play", { cardId: card.id }, (res) => {
-      if (!res?.ok) setActionError(res?.error || "Gre??ka.");
+      if (!res?.ok) setActionError(res?.error || "Gre?ka.");
     });
   }
 
@@ -902,7 +918,7 @@ function Game({ state, playerId, socket }) {
     if (!socket) return;
     socket.emit("player:props", { drink: propsDrink || null, glass: propsGlass, cigarette: propsCig }, (res) => {
       if (!res?.ok) {
-        setActionError(res?.error || "Gre??ka.");
+        setActionError(res?.error || "Gre?ka.");
         return;
       }
       setShowProps(false);
@@ -939,7 +955,7 @@ function Game({ state, playerId, socket }) {
 
             <div className="mt-4 grid grid-cols-2 gap-2">
               {[
-                { id: "spricer", label: "??pricer", img: imgSpricer },
+                { id: "spricer", label: "?pricer", img: imgSpricer },
                 { id: "pivo", label: "Pivo", img: imgPivo }
               ].map((opt) => (
                 <button
@@ -1064,7 +1080,7 @@ function Game({ state, playerId, socket }) {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") sendChat();
                       }}
-                      placeholder="Napi??i..."
+                      placeholder="Napi?i..."
                       className="bg-transparent outline-none text-sm text-white/90 placeholder:text-white/40 w-44"
                       maxLength={80}
                     />
