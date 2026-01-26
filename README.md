@@ -1,13 +1,20 @@
-# Zinga (osnovni full-stack engine)
+# Zinga - Online Multiplayer Card Game
 
 Full-stack multiplayer online kartaška igra **Zinga** (2v2) sa:
 
 - **Frontend**: React + Tailwind CSS (Vite)
 - **Backend**: Node.js + Express + Socket.io (real-time stanje sobe/igre)
 
-Ovo je **osnovni engine**: Lobby → Deljenje → Potezi → Osnovna logika uzimanja (rang) + Žandar.
-
 > Potrebno: **Node.js 18+** (zbog `randomUUID()`).
+
+## 🚀 Objavi online
+
+Za detaljne instrukcije, pogledaj **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
+
+**Brzi start:**
+1. **Backend:** Deploy na [Railway](https://railway.app) ili [Render](https://render.com)
+2. **Frontend:** Deploy na [Vercel](https://vercel.com) ili [Netlify](https://netlify.com)
+3. Postavi environment variables (vidi `DEPLOYMENT.md`)
 
 ## Pokretanje (lokalno)
 
