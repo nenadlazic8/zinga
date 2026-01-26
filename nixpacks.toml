@@ -9,7 +9,7 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "cd /app/client && npm run build"
+  "cd /app/client && node node_modules/vite/bin/vite.js build"
 ]
 
 [start]
