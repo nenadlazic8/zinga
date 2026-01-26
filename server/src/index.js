@@ -501,9 +501,11 @@ io.on("connection", (socket) => {
 
       if (room.players.length === 4) {
         startGame(room);
+        // Ensure state is broadcasted immediately after game starts
+        setTimeout(() => broadcastRoom(room), 50);
+      } else {
+        broadcastRoom(room);
       }
-
-      broadcastRoom(room);
       ack?.({ ok: true, playerId, roomId: safeRoomId });
     } catch (e) {
       ack?.({ ok: false, error: e?.message || "Greška." });
