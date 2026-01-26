@@ -992,7 +992,6 @@ function Game({ state, playerId, socket }) {
       // Clear ghost when new card is dropped
       setGhostCard(null);
     }
-  }, [g?.lastAction?.id, mySeat]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Zinga FX
     if (a.zinga === 10) {
