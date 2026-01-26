@@ -348,7 +348,7 @@ function applyPlay(room, playerId, cardId) {
 function sanitizeStateFor(room, viewerPlayerId) {
   const g = room.game;
 
-  const viewer = findPlayer(room, viewerPlayerId);
+  const viewer = viewerPlayerId ? findPlayer(room, viewerPlayerId) : null;
   const viewerTeam = viewer ? teamForSeat(viewer.seat) : null;
 
   const players = room.players

@@ -697,7 +697,7 @@ function WaitingRoom({ state, playerId }) {
 
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Igra??i u sobi</div>
+            <div className="text-sm font-semibold">Igrac i u sobi</div>
             <div className="text-xs text-white/60">Status: Lobby</div>
           </div>
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -1292,10 +1292,18 @@ export default function App() {
     if (socketRef.current) return socketRef.current;
     const s = createSocket();
     socketRef.current = s;
-    s.on("state", (next) => setState(next));
+    s.on("state", (next) => {
+      if (next) {
+        setState(next);
+      }
+    });
     s.on("connect_error", () => setError("Ne mogu da se povezem sa serverom."));
+    s.on("disconnect", () => {
+      setError("Konekcija sa serverom je prekinuta.");
+      setState(null);
+    });
     s.on("history", (history) => {
-      setState((prev) => ({ ...prev, matchHistory: history }));
+      setState((prev) => (prev ? { ...prev, matchHistory: history } : null));
     });
     return s;
   }
@@ -1307,7 +1315,7 @@ export default function App() {
     s.emit("room:join", { roomId, name }, (res) => {
       setJoining(false);
       if (!res?.ok) {
-        setError(res?.error || "Gre?ka.");
+        setError(res?.error || "Greska.");
         return;
       }
       setPlayerId(res.playerId);
