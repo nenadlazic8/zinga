@@ -93,6 +93,66 @@ function FlyingCard({ card, fromRel, toOffset, durationMs = 480, onDone }) {
   );
 }
 
+function FlyingCardsToPile({ actionId, fromSeat, toSeat, mySeat, cardCount = 3, durationMs = 600, onDone }) {
+  const [go, setGo] = useState(false);
+  
+  useEffect(() => {
+    if (!actionId) return;
+    const raf = requestAnimationFrame(() => setGo(true));
+    const t = setTimeout(() => onDone?.(), durationMs + 40);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+    };
+  }, [actionId, durationMs, onDone]);
+
+  // Start position: center of table (where talon is)
+  const start = { left: "50%", top: "50%" };
+
+  // End position: captured cards pile position based on toSeat relative to mySeat
+  const toRel = relativePos(mySeat, toSeat);
+  const endPositions = {
+    0: { left: "calc(50% + 320px)", top: "calc(100% - 100px)" }, // me (bottom right, where captured cards button is)
+    1: { left: "calc(12% - 80px)", top: "50%" }, // left (left side)
+    2: { left: "50%", top: "calc(12% - 80px)" }, // top (top center)
+    3: { left: "calc(88% + 80px)", top: "50%" } // right (right side)
+  };
+  const end = endPositions[toRel] || { left: "50%", top: "50%" };
+
+  // Create multiple cards with slight offset for visual effect
+  const cards = [];
+  const seed = Number(actionId) || 1;
+  const r = mulberry32(seed);
+  
+  for (let i = 0; i < Math.min(cardCount, 6); i++) {
+    const offsetX = (r() - 0.5) * 30;
+    const offsetY = (r() - 0.5) * 30;
+    const delay = i * 40; // Stagger animation slightly
+    const rotation = (r() - 0.5) * 20; // Random rotation
+    
+    cards.push(
+      <div
+        key={i}
+        className="absolute pointer-events-none z-40"
+        style={{
+          left: go ? `calc(${end.left} + ${offsetX}px)` : start.left,
+          top: go ? `calc(${end.top} + ${offsetY}px)` : start.top,
+          transform: go 
+            ? `translate(-50%, -50%) scale(0.35) rotate(${rotation}deg)` 
+            : `translate(-50%, -50%) scale(0.7) rotate(${(r() - 0.5) * 15}deg)`,
+          opacity: go ? 0 : 0.9,
+          transition: `all ${durationMs}ms cubic-bezier(0.2, 0.9, 0.2, 1)`,
+          transitionDelay: `${delay}ms`
+        }}
+      >
+        <CardBack compact={false} />
+      </div>
+    );
+  }
+
+  return <>{cards}</>;
+}
+
 function Confetti({ onComplete }) {
   const [show, setShow] = useState(true);
   useEffect(() => {
@@ -744,8 +804,10 @@ function Game({ state, playerId, socket }) {
   const [showCaptured, setShowCaptured] = useState(false);
   const [fx, setFx] = useState(null);
   const [flying, setFlying] = useState(null); // {id, card, fromRel, toOffset, hideTop}
+  const [flyingToPile, setFlyingToPile] = useState(null); // {id, fromSeat, toSeat, cardCount}
   const [talonOffset, setTalonOffset] = useState({ x: 0, y: 0 });
   const clearFlying = useCallback(() => setFlying(null), []);
+  const clearFlyingToPile = useCallback(() => setFlyingToPile(null), []);
   const [showProps, setShowProps] = useState(false);
   const [propsDrink, setPropsDrink] = useState("spricer");
   const [propsGlass, setPropsGlass] = useState(false);
@@ -893,6 +955,19 @@ function Game({ state, playerId, socket }) {
       toOffset: to,
       hideTop: a.type === "drop" // hide static top until animation ends (prevents double)
     });
+
+    // Animate cards flying to captured pile when cards are taken
+    if (a.type === "take" || a.type === "jack_take") {
+      // Estimate card count based on table count before (we don't have exact count from server)
+      // Use the table count from before the action (stored in latestTableCountRef)
+      const estimatedCount = Math.min(Math.max(2, latestTableCountRef.current + 1), 8); // +1 for the played card
+      setFlyingToPile({
+        id: a.id,
+        fromSeat: a.fromSeat,
+        toSeat: a.fromSeat, // Cards go to the player who took them
+        cardCount: estimatedCount
+      });
+    }
 
     // Zinga FX
     if (a.zinga === 10) {
@@ -1152,6 +1227,17 @@ function Game({ state, playerId, socket }) {
                   fromRel={flying.fromRel}
                   toOffset={flying.toOffset}
                   onDone={clearFlying}
+                />
+              ) : null}
+              {/* Flying cards to captured pile */}
+              {flyingToPile ? (
+                <FlyingCardsToPile
+                  actionId={flyingToPile.id}
+                  fromSeat={flyingToPile.fromSeat}
+                  toSeat={flyingToPile.toSeat}
+                  mySeat={mySeat}
+                  cardCount={flyingToPile.cardCount}
+                  onDone={clearFlyingToPile}
                 />
               ) : null}
               {/* Top (partner) */}
