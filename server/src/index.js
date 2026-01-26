@@ -21,7 +21,12 @@ app.use(cors({
 }));
 
 // Serve static files from client/dist (if it exists)
-app.use(express.static(join(__dirname, '../../client/dist')));
+// This includes CSS, JS, and other assets
+const clientDistPath = join(__dirname, '../../client/dist');
+app.use(express.static(clientDistPath, {
+  maxAge: '1y', // Cache static assets
+  etag: true
+}));
 
 app.get("/health", (_req, res) => res.json({ ok: true, name: "zinga-server" }));
 
