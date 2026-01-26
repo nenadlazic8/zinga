@@ -760,6 +760,13 @@ function Game({ state, playerId, socket }) {
   const [handRevealCount, setHandRevealCount] = useState(0);
   const [talonDisplayCount, setTalonDisplayCount] = useState(g?.tableCount ?? 0);
   const [hideTalonTopDuringDeal, setHideTalonTopDuringDeal] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const mySeat = me?.seat ?? 0;
   const myTeam = me?.team ?? "A";
@@ -1208,7 +1215,7 @@ function Game({ state, playerId, socket }) {
                       title="Prika?i no?ene karte"
                     >
                       <div className="relative">
-                        {myCapturedTop ? <Card card={myCapturedTop} compact /> : <CardBack compact />}
+                        {myCapturedTop ? <Card card={myCapturedTop} compact={isMobile} /> : <CardBack compact={isMobile} />}
                         <div className="absolute -right-2 -bottom-2 rounded-full bg-emerald-500 text-black text-[10px] font-semibold px-2 py-0.5 ring-1 ring-black/20">
                           {myCapturedCount}
                         </div>
