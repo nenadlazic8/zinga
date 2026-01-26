@@ -3,14 +3,13 @@ nixPkgs = ["nodejs-18_x"]
 
 [phases.install]
 cmds = [
-  "cd /app/server && npm install",
-  "cd /app/client && npm install"
+  "npm run install-all"
 ]
 
 [phases.build]
 cmds = [
-  "cd /app/client && node node_modules/vite/bin/vite.js build"
+  "npm run build"
 ]
 
 [start]
-cmd = "cd /app/server && npm start"
+cmd = "npm start"
