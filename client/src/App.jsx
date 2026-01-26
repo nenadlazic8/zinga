@@ -719,9 +719,30 @@ function WaitingRoom({ state, playerId }) {
 }
 
 function Game({ state, playerId, socket }) {
+  // #region agent log
+  console.log("[Game] Component render", { phase: state.phase, hasGame: !!state.game, playerCount: state.players?.length, playerId });
+  // #endregion
   const roomPlayers = state.players || [];
   const me = roomPlayers.find((p) => p.id === playerId);
   const g = state.game;
+  
+  // #region agent log
+  if (!g) {
+    console.error("[Game] state.game is null/undefined!", { phase: state.phase, players: roomPlayers.length, me: !!me });
+  }
+  // #endregion
+  
+  // Early return if game state is not ready
+  if (!g) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-white/70">
+        <div className="text-center">
+          <div>Ucitavanje igre...</div>
+          <div className="mt-2 text-sm text-white/50">Cekam podatke o igri...</div>
+        </div>
+      </div>
+    );
+  }
 
   const [actionError, setActionError] = useState("");
   const [showCaptured, setShowCaptured] = useState(false);
@@ -1293,11 +1314,20 @@ export default function App() {
     const s = createSocket();
     socketRef.current = s;
     s.on("state", (next) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client/src/App.jsx:1295',message:'State event received',data:{hasState:!!next,phase:next?.phase,playerCount:next?.players?.length,hasGame:!!next?.game},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       if (next) {
         console.log("Received state update:", next.phase, next.players?.length, "players");
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client/src/App.jsx:1298',message:'Setting state',data:{phase:next.phase,playerCount:next.players?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         setState(next);
         setError(""); // Clear any previous errors
       } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client/src/App.jsx:1301',message:'Received null/undefined state',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         console.warn("Received null/undefined state");
       }
     });
@@ -1310,6 +1340,9 @@ export default function App() {
       setError("Ne mogu da se povezem sa serverom.");
     });
     s.on("disconnect", (reason) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client/src/App.jsx:1312',message:'Socket disconnected',data:{reason},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       // Don't clear state on intentional disconnects or reconnection attempts
       if (reason === "io server disconnect" || reason === "transport close") {
         // Server or network issue - keep state but show error
@@ -1359,6 +1392,9 @@ export default function App() {
   }
 
   if (!state) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client/src/App.jsx:1361',message:'State is null, showing loading',data:{hasError:!!error,error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+    // #endregion
     return (
       <div className="min-h-screen flex items-center justify-center text-white/70">
         <div className="text-center">
@@ -1393,9 +1429,36 @@ export default function App() {
   }
 
   // Default: render Game component for "playing" or "finished" phases
+  // #region agent log
+  console.log("[App] About to render Game", { phase: state.phase, hasGame: !!state.game, playerCount: state.players?.length, playerId });
+  // #endregion
   try {
+    // Guard: don't render Game if game state is missing
+    if (state.phase === "playing" && !state.game) {
+      console.error("[App] Phase is 'playing' but state.game is null!");
+      return (
+        <div className="min-h-screen flex items-center justify-center text-white/70">
+          <div className="text-center">
+            <div className="text-xl font-semibold mb-2">Greska: Igra nije spremna</div>
+            <div className="text-sm text-red-300 mb-4">Cekam podatke o igri od servera...</div>
+            <button
+              onClick={() => {
+                setPlayerId("");
+                setState(null);
+              }}
+              className="mt-4 px-6 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold transition"
+            >
+              Nazad u lobby
+            </button>
+          </div>
+        </div>
+      );
+    }
     return <Game state={state} playerId={playerId} socket={socketRef.current} />;
   } catch (err) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client/src/App.jsx:1381',message:'Error rendering Game component',data:{error:err.message,stack:err.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     console.error("Error rendering Game component:", err);
     return (
       <div className="min-h-screen flex items-center justify-center text-white/70">

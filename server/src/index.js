@@ -106,6 +106,9 @@ function dealFourEach(room) {
 }
 
 function startGame(room, startSeat = room.match?.startSeat ?? 0) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/src/index.js:108',message:'startGame entry',data:{roomId:room.id,playerCount:room.players.length,startSeat},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
   const deck = shuffleInPlace(createDeck());
   const hands = {};
   for (const p of room.players) hands[p.id] = [];
@@ -146,6 +149,9 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
   }
   // Initial deal event for UI animations
   room.game.lastDeal = { id: nextActionId(room), isLast: false, round: 1, hand: room.match?.hand ?? null };
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'server/src/index.js:149',message:'startGame exit',data:{roomId:room.id,phase:room.phase,hasGame:!!room.game,tableCards:room.game?.table?.length,deckSize:room.game?.deck?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+  // #endregion
 }
 
 function endGame(room) {
@@ -453,13 +459,32 @@ function sanitizeStateFor(room, viewerPlayerId) {
 }
 
 function broadcastRoom(room) {
+  // #region agent log
+  console.log("[Server] broadcastRoom called", { roomId: room.id, playerCount: room.players.length, phase: room.phase, hasGame: !!room.game });
+  // #endregion
   for (const p of room.players) {
     try {
+      // #region agent log
+      console.log("[Server] Broadcasting to player", { playerId: p.id, playerName: p.name, socketId: p.socketId });
+      // #endregion
       const state = sanitizeStateFor(room, p.id);
+      // #region agent log
+      console.log("[Server] sanitizeStateFor result", { playerId: p.id, stateIsNull: !state, statePhase: state?.phase, stateHasGame: !!state?.game, stateGameTableCount: state?.game?.tableCount });
+      // #endregion
       if (state) {
         io.to(p.socketId).emit("state", state);
+        // #region agent log
+        console.log("[Server] State emitted to socket", { playerId: p.id, socketId: p.socketId });
+        // #endregion
+      } else {
+        // #region agent log
+        console.error("[Server] State is null, not emitting!", { playerId: p.id, roomPhase: room.phase, roomHasGame: !!room.game });
+        // #endregion
       }
     } catch (err) {
+      // #region agent log
+      console.error("[Server] Error broadcasting to player", { playerId: p.id, error: err.message, stack: err.stack });
+      // #endregion
       console.error(`Error broadcasting to player ${p.id}:`, err);
     }
   }
@@ -500,9 +525,17 @@ io.on("connection", (socket) => {
       socket.join(safeRoomId);
 
       if (room.players.length === 4) {
+        // #region agent log
+        console.log("[Server] 4 players joined, starting game", { roomId: safeRoomId, playerCount: room.players.length });
+        // #endregion
         startGame(room);
-        // Ensure state is broadcasted immediately after game starts
-        setTimeout(() => broadcastRoom(room), 50);
+        // #region agent log
+        console.log("[Server] startGame completed", { roomId: safeRoomId, phase: room.phase, hasGame: !!room.game, gameTableCount: room.game?.table?.length });
+        // #endregion
+        // Broadcast immediately (don't wait for setTimeout)
+        broadcastRoom(room);
+        // Also broadcast after a short delay to ensure all clients receive it
+        setTimeout(() => broadcastRoom(room), 100);
       } else {
         broadcastRoom(room);
       }
