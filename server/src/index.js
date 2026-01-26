@@ -501,6 +501,12 @@ io.on("connection", (socket) => {
       socket.data.roomId = safeRoomId;
       socket.data.playerId = playerId;
       socket.join(safeRoomId);
+      
+      // Mark player as connected
+      const player = findPlayer(room, playerId);
+      if (player) {
+        player.connected = true;
+      }
 
       if (room.players.length === 4) {
         startGame(room);
@@ -666,18 +672,23 @@ io.on("connection", (socket) => {
     const p = findPlayer(room, playerId);
     if (!p) return;
 
+    // Mark player as disconnected but don't immediately abort
+    // Give them a chance to reconnect (Socket.io will auto-reconnect)
+    p.connected = false;
+
     // Basic behavior:
     // - If still in lobby: remove player so someone else can join.
-    // - If game is playing: abort the game.
+    // - If game is playing: only abort if ALL players are disconnected
     if (room.phase === "lobby") {
       room.players = room.players.filter((x) => x.id !== playerId);
       if (room.players.length === 0) rooms.delete(roomId);
     } else if (room.phase === "playing") {
-      room.phase = "aborted";
-      room.game?.log?.push("Igra je prekinuta (igrač se diskonektovao).");
-      p.connected = false;
-    } else {
-      p.connected = false;
+      // Only abort if all players are disconnected
+      const allDisconnected = room.players.every((pl) => !pl.connected);
+      if (allDisconnected) {
+        room.phase = "aborted";
+        room.game?.log?.push("Igra je prekinuta (svi igrači su se diskonektovali).");
+      }
     }
 
     if (rooms.has(roomId)) broadcastRoom(room);
