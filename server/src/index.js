@@ -673,7 +673,13 @@ app.get('*', (req, res, next) => {
   if (req.path.startsWith('/health') || req.path.startsWith('/socket.io')) {
     return next();
   }
-  res.sendFile(join(__dirname, '../../client/dist/index.html'), (err) => {
+  // Skip static assets (CSS, JS, images, etc.) - they're handled by express.static
+  const ext = req.path.split('.').pop();
+  const staticExtensions = ['css', 'js', 'png', 'jpg', 'jpeg', 'gif', 'svg', 'ico', 'woff', 'woff2', 'ttf', 'eot'];
+  if (staticExtensions.includes(ext)) {
+    return next(); // Let express.static handle it
+  }
+  res.sendFile(join(clientDistPath, 'index.html'), (err) => {
     if (err) {
       // If client/dist doesn't exist, continue (backend-only mode)
       next();
