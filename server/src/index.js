@@ -82,14 +82,16 @@ function playerBySeat(room, seat) {
 }
 
 function nextSeat(seat) {
-  return (seat + 1) % 4;
+  // Counter-clockwise: 0 -> 3 -> 2 -> 1 -> 0
+  return (seat + 3) % 4;
 }
 
 function dealFourEach(room) {
   const g = room.game;
   const startSeat = g.dealSeat ?? 0;
+  // Deal counter-clockwise: 0 -> 3 -> 2 -> 1 -> 0
   for (let offset = 0; offset < 4; offset++) {
-    const seat = (startSeat + offset) % 4;
+    const seat = (startSeat - offset + 4) % 4; // -offset for counter-clockwise
     const p = playerBySeat(room, seat);
     if (!p) continue;
     g.hands[p.id] ||= [];
@@ -119,7 +121,7 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
     hands,
     turnSeat: startSeat,
     dealSeat: startSeat,
-    deckOwnerSeat: (startSeat + 3) % 4,
+    deckOwnerSeat: (startSeat - 1 + 4) % 4, // Previous player in counter-clockwise order (will get last card)
     lastTakerPlayerId: null,
     lastAction: null,
     lastDeal: { id: 0, isLast: false, round: 1, hand: room.match?.hand ?? null },
