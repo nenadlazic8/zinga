@@ -118,7 +118,7 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
     room.match.winner = null;
   }
 
-  room.phase = "playing";
+  // Set game first, then phase (to avoid race condition)
   room.game = {
     round: 1,
     deck,
@@ -140,7 +140,10 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
         : "Igra je počela. Deljenje: 4 karte + 4 na sto."
     ]
   };
-
+  
+  // Now set phase after game is fully initialized
+  room.phase = "playing";
+  
   dealFourEach(room);
   for (let i = 0; i < 4; i++) {
     const c = room.game.deck.pop();
@@ -530,8 +533,24 @@ io.on("connection", (socket) => {
         // #endregion
         startGame(room);
         // #region agent log
-        console.log("[Server] startGame completed", { roomId: safeRoomId, phase: room.phase, hasGame: !!room.game, gameTableCount: room.game?.table?.length });
+        console.log("[Server] startGame completed", { 
+          roomId: safeRoomId, 
+          phase: room.phase, 
+          hasGame: !!room.game, 
+          gameTableCount: room.game?.table?.length,
+          gameDeckCount: room.game?.deck?.length,
+          gameHandsCount: Object.keys(room.game?.hands || {}).length
+        });
         // #endregion
+        
+        // Verify game state is complete before broadcasting
+        if (!room.game) {
+          console.error("[Server] ERROR: room.game is null after startGame!");
+        }
+        if (room.phase !== "playing") {
+          console.error("[Server] ERROR: room.phase is not 'playing' after startGame!", { phase: room.phase });
+        }
+        
         // Broadcast immediately (don't wait for setTimeout)
         broadcastRoom(room);
         // Also broadcast after a short delay to ensure all clients receive it
