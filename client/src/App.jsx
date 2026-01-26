@@ -813,6 +813,7 @@ function Game({ state, playerId, socket }) {
   const [propsGlass, setPropsGlass] = useState(false);
   const [propsCig, setPropsCig] = useState(false);
   const [chatText, setChatText] = useState("");
+  const [showChat, setShowChat] = useState(false);
   const [bubbles, setBubbles] = useState({}); // playerId -> {text, id}
   const [isDealing, setIsDealing] = useState(false);
   const [handRevealCount, setHandRevealCount] = useState(0);
@@ -1129,6 +1130,55 @@ function Game({ state, playerId, socket }) {
         title={`Nosene karte (${myTeamLabel})`}
         cards={myCaptured}
       />
+      {/* Mobile Chat Modal */}
+      {showChat ? (
+        <div className="fixed inset-0 z-50 flex items-end sm:hidden">
+          <button 
+            type="button" 
+            className="absolute inset-0 bg-black/70" 
+            onClick={() => setShowChat(false)} 
+            aria-label="Zatvori chat"
+          />
+          <div className="relative w-full bg-neutral-950 ring-1 ring-white/10 rounded-t-2xl p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-lg font-semibold">Chat</div>
+              <button
+                type="button"
+                onClick={() => setShowChat(false)}
+                className="rounded-xl bg-white/10 hover:bg-white/15 ring-1 ring-white/10 px-3 py-2 text-sm transition"
+              >
+                Zatvori
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                value={chatText}
+                onChange={(e) => setChatText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    sendChat();
+                    setShowChat(false);
+                  }
+                }}
+                placeholder="Napi?i..."
+                className="flex-1 bg-black/30 ring-1 ring-white/10 rounded-xl px-4 py-3 text-sm text-white/90 placeholder:text-white/40 outline-none focus:ring-emerald-400/40"
+                maxLength={80}
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  sendChat();
+                  setShowChat(false);
+                }}
+                className="rounded-xl bg-emerald-500 text-black hover:bg-emerald-400 px-4 py-3 text-sm font-semibold transition min-w-[80px]"
+              >
+                Posalji
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -1192,7 +1242,8 @@ function Game({ state, playerId, socket }) {
                   >
                     Uzmi pice
                   </button>
-                  <div className="flex items-center gap-2 rounded-xl bg-black/35 ring-1 ring-white/10 px-2 py-1">
+                  {/* Desktop: always visible chat */}
+                  <div className="hidden sm:flex items-center gap-2 rounded-xl bg-black/35 ring-1 ring-white/10 px-2 py-1">
                     <input
                       value={chatText}
                       onChange={(e) => setChatText(e.target.value)}
@@ -1211,6 +1262,15 @@ function Game({ state, playerId, socket }) {
                       Posalji
                     </button>
                   </div>
+                  {/* Mobile: chat button */}
+                  <button
+                    type="button"
+                    onClick={() => setShowChat(true)}
+                    className="sm:hidden rounded-xl bg-black/35 hover:bg-black/45 ring-1 ring-white/10 px-3 py-2 text-sm text-white/90 transition"
+                    title="Chat"
+                  >
+                    ??
+                  </button>
                 </div>
               </div>
               {isDealing ? (
