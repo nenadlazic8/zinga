@@ -9,6 +9,12 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
-    assetsDir: "assets"
+    assetsDir: "assets",
+    cssCodeSplit: false, // Bundle all CSS into a single file for easier serving
+    rollupOptions: {
+      output: {
+        assetFileNames: "assets/[name].[ext]"
+      }
+    }
   }
 });
