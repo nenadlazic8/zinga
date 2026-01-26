@@ -1318,10 +1318,24 @@ export default function App() {
       fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client/src/App.jsx:1295',message:'State event received',data:{hasState:!!next,phase:next?.phase,playerCount:next?.players?.length,hasGame:!!next?.game},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
       if (next) {
-        console.log("Received state update:", next.phase, next.players?.length, "players");
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'client/src/App.jsx:1298',message:'Setting state',data:{phase:next.phase,playerCount:next.players?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        console.log("[Client] State event received", { 
+          hasState: !!next, 
+          phase: next?.phase, 
+          playerCount: next?.players?.length, 
+          hasGame: !!next?.game,
+          gameTableCount: next?.game?.tableCount,
+          gameDeckCount: next?.game?.deckCount
+        });
         // #endregion
+        // Validate state before setting
+        if (next.phase === "playing" && !next.game) {
+          console.error("[Client] ERROR: Received state with phase='playing' but game is null!", next);
+          // Don't set invalid state - keep current state or show error
+          setError("Greska: Igra nije spremna. Cekam podatke od servera...");
+          return;
+        }
+        console.log("Received state update:", next.phase, next.players?.length, "players");
         setState(next);
         setError(""); // Clear any previous errors
       } else {
