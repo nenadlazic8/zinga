@@ -162,17 +162,35 @@ function endGame(room) {
       const team = teamForSeat(lp.seat);
       g.captures[team].cards.push(...g.table);
       g.table = [];
+      
+      // Update bonus for most cards after last take
+      const aCards = g.captures.A.cards.length;
+      const bCards = g.captures.B.cards.length;
+      
+      // Reset bonuses first
+      g.captures.A.bonusMostCards = 0;
+      g.captures.B.bonusMostCards = 0;
+      
+      // Award bonus to team with most cards (27+)
+      if (aCards !== bCards && Math.max(aCards, bCards) >= 27) {
+        const winner = aCards > bCards ? "A" : "B";
+        g.captures[winner].bonusMostCards = 4;
+      }
     }
   }
 
-  // +4 points for most cards (27+)
+  // Bonus for most cards is already calculated during play, just ensure it's set correctly
   const aCards = g.captures.A.cards.length;
   const bCards = g.captures.B.cards.length;
-  if (aCards !== bCards) {
+  
+  // Reset bonuses first
+  g.captures.A.bonusMostCards = 0;
+  g.captures.B.bonusMostCards = 0;
+  
+  // Award bonus to team with most cards (27+)
+  if (aCards !== bCards && Math.max(aCards, bCards) >= 27) {
     const winner = aCards > bCards ? "A" : "B";
-    if (Math.max(aCards, bCards) >= 27) {
-      g.captures[winner].bonusMostCards = 4;
-    }
+    g.captures[winner].bonusMostCards = 4;
   }
 
   const aHand = computeTeamScore(g.captures.A);
@@ -321,9 +339,23 @@ function applyPlay(room, playerId, cardId) {
     g.captures[team].cards.push(...taken);
     g.lastTakerPlayerId = playerId;
     
+    // Check and update bonus for most cards (27+) immediately
+    const aCards = g.captures.A.cards.length;
+    const bCards = g.captures.B.cards.length;
+    
+    // Reset bonuses first
+    g.captures.A.bonusMostCards = 0;
+    g.captures.B.bonusMostCards = 0;
+    
+    // Award bonus to team with most cards (27+)
+    if (aCards !== bCards && Math.max(aCards, bCards) >= 27) {
+      const winner = aCards > bCards ? "A" : "B";
+      g.captures[winner].bonusMostCards = 4;
+    }
+    
     // Check if game should end immediately (101+ points reached)
     if (room.match) {
-      // Calculate current hand scores
+      // Calculate current hand scores (including bonus)
       const aHand = computeTeamScore(g.captures.A);
       const bHand = computeTeamScore(g.captures.B);
       
