@@ -987,17 +987,25 @@ function Game({ state, playerId, socket }) {
       setGhostCard({ card: a.card, id: a.id });
       // Remove ghost after 1.5 seconds
       const ghostTimeout = setTimeout(() => setGhostCard(null), 1500);
+      
+      // Zinga FX (check before setting cleanup)
+      if (a.zinga === 10) {
+        setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
+      } else if (a.zinga === 20) {
+        setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ZANDARA! +20", subtitle: a.playerName });
+      }
+      
       return () => clearTimeout(ghostTimeout);
     } else {
       // Clear ghost when new card is dropped
       setGhostCard(null);
-    }
-
-    // Zinga FX
-    if (a.zinga === 10) {
-      setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
-    } else if (a.zinga === 20) {
-      setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ZANDARA! +20", subtitle: a.playerName });
+      
+      // Zinga FX
+      if (a.zinga === 10) {
+        setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
+      } else if (a.zinga === 20) {
+        setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ZANDARA! +20", subtitle: a.playerName });
+      }
     }
   }, [g?.lastAction?.id, mySeat]); // eslint-disable-line react-hooks/exhaustive-deps
 
