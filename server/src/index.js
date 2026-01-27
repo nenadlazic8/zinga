@@ -399,9 +399,19 @@ function applyPlay(room, playerId, cardId) {
     g.captures.B.bonusMostCards = 0;
     
     // Award bonus to team with most cards (27+)
-    if (aCards !== bCards && Math.max(aCards, bCards) >= 27) {
-      const winner = aCards > bCards ? "A" : "B";
-      g.captures[winner].bonusMostCards = 4;
+    // If both teams have 27+ cards, only the team with MORE cards gets the bonus
+    if (aCards >= 27 || bCards >= 27) {
+      if (aCards > bCards) {
+        g.captures.A.bonusMostCards = 4;
+        g.captures.B.bonusMostCards = 0;
+      } else if (bCards > aCards) {
+        g.captures.B.bonusMostCards = 4;
+        g.captures.A.bonusMostCards = 0;
+      } else {
+        // Equal cards (both 27+), no bonus
+        g.captures.A.bonusMostCards = 0;
+        g.captures.B.bonusMostCards = 0;
+      }
     }
     
     // Check if game should end immediately (101+ points reached)

@@ -420,7 +420,7 @@ function TalonStack({ count, topCard, seed, hideTop, ghostCard }) {
   }
 
   return (
-    <div className="relative w-[200px] h-[180px] sm:w-[220px] sm:h-[200px] md:w-[280px] md-h-[260px]">
+    <div className="relative w-[240px] h-[220px] sm:w-[220px] sm:h-[200px] md:w-[280px] md:h-[260px]">
       {layers}
       {/* Ghost card - faded outline of last taken card */}
       {ghostCard && !hideTop && (
@@ -1061,10 +1061,152 @@ function WaitingRoom({ state, playerId, socket }) {
   );
 }
 
+// Audio context manager for mobile compatibility
+function useAudioManager() {
+  const audioContextRef = useRef(null);
+  const audioEnabledRef = useRef(false);
+  const audioInstancesRef = useRef({});
+
+  // Enable audio on first user interaction
+  useEffect(() => {
+    const enableAudio = async () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1072',message:'enableAudio called',data:{alreadyEnabled:audioEnabledRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
+      if (!audioEnabledRef.current) {
+        audioEnabledRef.current = true;
+        // Pre-create audio instances for better mobile compatibility
+        const sounds = {
+          cardDrop: cardDropSound,
+          cardDeal: cardDealSound,
+          cardsTaken: cardsTakenSound,
+          glassClink: glassClinkSound,
+          beerOpen: beerOpenSound,
+          pivoOpen: pivoOpenSound,
+        };
+        
+        // Create and "unlock" audio instances by playing and immediately pausing
+        // This is required for mobile browsers to allow audio playback
+        const unlockPromises = [];
+        Object.keys(sounds).forEach((key) => {
+          try {
+            const audio = new Audio(sounds[key]);
+            audio.preload = 'auto';
+            audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
+            audioInstancesRef.current[key] = audio;
+            
+            // Unlock audio on mobile by playing and pausing immediately
+            const unlockPromise = audio.play().then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1091',message:'Audio unlocked',data:{soundKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+              // #endregion
+            }).catch((err) => {
+              // Ignore errors - audio will be unlocked on first real play
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1095',message:'Audio unlock failed',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+              // #endregion
+            });
+            unlockPromises.push(unlockPromise);
+          } catch (err) {
+            console.log(`Failed to preload audio ${key}:`, err);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1100',message:'Audio preload failed',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
+          }
+        });
+        
+        // Wait for all unlock attempts
+        await Promise.all(unlockPromises);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1105',message:'Audio enabled',data:{unlockedCount:unlockPromises.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+      }
+    };
+
+    // Enable on any user interaction (click or touch)
+    const enableOnClick = () => enableAudio();
+    const enableOnTouch = () => enableAudio();
+    
+    document.addEventListener('click', enableOnClick, { once: true, passive: true });
+    document.addEventListener('touchstart', enableOnTouch, { once: true, passive: true });
+    
+    return () => {
+      document.removeEventListener('click', enableOnClick);
+      document.removeEventListener('touchstart', enableOnTouch);
+    };
+  }, []);
+
+  const playSound = useCallback((soundKey, volumeOverride = null) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1108',message:'playSound called',data:{soundKey,audioEnabled:audioEnabledRef.current,hasInstance:!!audioInstancesRef.current[soundKey]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
+    
+    if (!audioEnabledRef.current) {
+      // Try to enable audio
+      audioEnabledRef.current = true;
+    }
+
+    try {
+      const audio = audioInstancesRef.current[soundKey];
+      if (audio) {
+        // Clone and play to allow overlapping sounds
+        const clone = audio.cloneNode();
+        if (volumeOverride !== null) clone.volume = volumeOverride;
+        clone.play().then(() => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1120',message:'Sound played successfully',data:{soundKey,method:'clone'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+        }).catch((err) => {
+          console.log(`Could not play ${soundKey} sound:`, err);
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1123',message:'Sound play failed',data:{soundKey,error:err?.message||String(err),method:'clone'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+          // #endregion
+        });
+      } else {
+        // Fallback: create new audio if preload failed
+        let soundSrc = null;
+        switch (soundKey) {
+          case 'cardDrop': soundSrc = cardDropSound; break;
+          case 'cardDeal': soundSrc = cardDealSound; break;
+          case 'cardsTaken': soundSrc = cardsTakenSound; break;
+          case 'glassClink': soundSrc = glassClinkSound; break;
+          case 'beerOpen': soundSrc = beerOpenSound; break;
+          case 'pivoOpen': soundSrc = pivoOpenSound; break;
+        }
+        if (soundSrc) {
+          const audio = new Audio(soundSrc);
+          audio.volume = volumeOverride !== null ? volumeOverride : (soundKey === 'cardDrop' ? 0.3 : 0.4);
+          audio.play().then(() => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1137',message:'Sound played successfully (fallback)',data:{soundKey,method:'new'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+          }).catch((err) => {
+            console.log(`Could not play ${soundKey} sound (fallback):`, err);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1140',message:'Sound play failed (fallback)',data:{soundKey,error:err?.message||String(err),method:'new'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+          });
+        }
+      }
+    } catch (err) {
+      console.log(`Error playing ${soundKey} sound:`, err);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1145',message:'Sound play exception',data:{soundKey,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+    }
+  }, []);
+
+  return { playSound, audioEnabled: audioEnabledRef.current };
+}
+
 function Game({ state, playerId, socket }) {
   const roomPlayers = state.players || [];
   const me = roomPlayers.find((p) => p.id === playerId);
   const g = state.game;
+  const { playSound } = useAudioManager();
   
   // Early return if game state is not ready
   if (!g) {
@@ -1157,12 +1299,7 @@ function Game({ state, playerId, socket }) {
     setHandRevealCount(0);
 
     // Play card dealing sound when cards are dealt in a new hand
-    const audio = new Audio(cardDealSound);
-    audio.volume = 0.4; // Set volume to 40%
-    audio.play().catch((err) => {
-      // Ignore errors (e.g., user hasn't interacted with page yet)
-      console.log("Could not play card deal sound:", err);
-    });
+    playSound('cardDeal');
 
     const isInitial = deal.round === 1;
     if (isInitial) {
@@ -1238,12 +1375,7 @@ function Game({ state, playerId, socket }) {
 
     // Play card drop sound when card is dropped on table
     if (a.type === "drop") {
-      const audio = new Audio(cardDropSound);
-      audio.volume = 0.3; // Set volume to 30%
-      audio.play().catch((err) => {
-        // Ignore errors (e.g., user hasn't interacted with page yet)
-        console.log("Could not play card drop sound:", err);
-      });
+      playSound('cardDrop', 0.3);
     }
 
     // Card flight (always)
@@ -1258,12 +1390,7 @@ function Game({ state, playerId, socket }) {
     // Animate cards flying to captured pile when cards are taken
     if (a.type === "take" || a.type === "jack_take") {
       // Play sound when cards are taken
-      const audio = new Audio(cardsTakenSound);
-      audio.volume = 0.4; // Set volume to 40%
-      audio.play().catch((err) => {
-        // Ignore errors (e.g., user hasn't interacted with page yet)
-        console.log("Could not play cards taken sound:", err);
-      });
+      playSound('cardsTaken');
       
       // Estimate card count based on table count before (we don't have exact count from server)
       // Use the table count from before the action (stored in latestTableCountRef)
@@ -1374,12 +1501,7 @@ function Game({ state, playerId, socket }) {
         setTimeout(() => setGlassShakePlayerId(null), 500);
         
         // Play glass clink sound
-        const audio = new Audio(glassClinkSound);
-        audio.volume = 0.4; // Set volume to 40%
-        audio.play().catch((err) => {
-          // Ignore errors (e.g., user hasn't interacted with page yet)
-          console.log("Could not play glass clink sound:", err);
-        });
+        playSound('glassClink');
       }
       
       // Play drink opening sound only if drink changed or is first time
@@ -1392,12 +1514,8 @@ function Game({ state, playerId, socket }) {
         }
         
         if (drinkSound) {
-          const audio = new Audio(drinkSound);
-          audio.volume = 0.4; // Set volume to 40%
-          audio.play().catch((err) => {
-            // Ignore errors (e.g., user hasn't interacted with page yet)
-            console.log("Could not play drink open sound:", err);
-          });
+          const soundKey = currentDrink === "spricer" ? 'beerOpen' : 'pivoOpen';
+          playSound(soundKey);
         }
       }
       
@@ -1683,9 +1801,6 @@ function Game({ state, playerId, socket }) {
                   </div>
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[2]?.name || "?"}</div>
-                <div className="text-xs text-white/60">
-                  Karte: {byRel[2] ? getHandCount(byRel[2].id) : 0} • {byRel[2] ? teamLabel(byRel[2].team, roomPlayers) : ""}
-                </div>
                 {g?.turnSeat === byRel[2]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
 
@@ -1719,9 +1834,6 @@ function Game({ state, playerId, socket }) {
                   </div>
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[3]?.name || "?"}</div>
-                <div className="text-xs text-white/60">
-                  Karte: {byRel[3] ? getHandCount(byRel[3].id) : 0} • {byRel[3] ? teamLabel(byRel[3].team, roomPlayers) : ""}
-                </div>
                 {g?.turnSeat === byRel[3]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
 
