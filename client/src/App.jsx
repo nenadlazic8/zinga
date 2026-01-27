@@ -788,27 +788,27 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                 className="rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20 p-6 hover:bg-emerald-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
               >
                 <div className="text-xl font-semibold mb-2">2v2</div>
-                <div className="text-sm text-white/70 leading-relaxed">Ti + Bot Partner vs 2 Botovi</div>
+                <div className="text-sm text-white/70 leading-relaxed">Ti + Bot Partner (pored) vs 2 Botovi</div>
               </button>
               <button
                 onClick={() => {
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:787',message:'1v3 button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:794',message:'2v2 (partner across) button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                   // #endregion
                   if (!name.trim()) {
                     setError("Unesite ime.");
                     return;
                   }
                   if (setSelectedBotMode) {
-                    setSelectedBotMode("1v3");
+                    setSelectedBotMode("2v2");
                   }
                   if (setError) setError("");
                 }}
                 disabled={!name.trim()}
                 className="rounded-xl bg-blue-500/10 ring-1 ring-blue-400/20 p-6 hover:bg-blue-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
               >
-                <div className="text-xl font-semibold mb-2">1v3</div>
-                <div className="text-sm text-white/70 leading-relaxed">Ti sam vs 3 Botovi</div>
+                <div className="text-xl font-semibold mb-2">2v2</div>
+                <div className="text-sm text-white/70 leading-relaxed">Ti + Bot Partner (preko puta) vs 2 Botovi</div>
               </button>
             </div>
           </div>
@@ -819,7 +819,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
           <div className="mt-8">
             <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-6 mb-4">
               <div className="text-base font-semibold mb-2">
-                Izabran mod: {selectedBotMode === "2v2" ? "2v2 (Ti + Bot Partner vs 2 Botovi)" : "1v3 (Ti sam vs 3 Botovi)"}
+                Izabran mod: {selectedBotMode === "2v2" ? "2v2 (Ti + Bot Partner vs 2 Botovi)" : "2v2 (Ti + Bot Partner vs 2 Botovi)"}
               </div>
               <div className="text-sm text-white/70">
                 Klikni "Pokreni igru" da zapocnes igru sa botovima.
@@ -1127,44 +1127,74 @@ function useAudioManager() {
     };
 
     // Enable on any user interaction (click or touch)
-    const enableOnClick = () => enableAudio();
-    const enableOnTouch = () => enableAudio();
+    // Use capture phase and multiple events for better mobile support
+    const enableOnInteraction = (e) => {
+      enableAudio();
+      // Also try to unlock audio immediately on this interaction
+      if (e && e.type === 'touchstart') {
+        // For touch events, also try to play a silent sound to unlock audio
+        try {
+          const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+          silentAudio.volume = 0.01;
+          silentAudio.play().catch(() => {});
+        } catch {}
+      }
+    };
     
-    document.addEventListener('click', enableOnClick, { once: true, passive: true });
-    document.addEventListener('touchstart', enableOnTouch, { once: true, passive: true });
+    // Add multiple event listeners for better mobile compatibility
+    document.addEventListener('click', enableOnInteraction, { once: true, passive: true, capture: true });
+    document.addEventListener('touchstart', enableOnInteraction, { once: true, passive: true, capture: true });
+    document.addEventListener('touchend', enableOnInteraction, { once: true, passive: true, capture: true });
+    document.addEventListener('mousedown', enableOnInteraction, { once: true, passive: true, capture: true });
     
     return () => {
-      document.removeEventListener('click', enableOnClick);
-      document.removeEventListener('touchstart', enableOnTouch);
+      document.removeEventListener('click', enableOnInteraction, { capture: true });
+      document.removeEventListener('touchstart', enableOnInteraction, { capture: true });
+      document.removeEventListener('touchend', enableOnInteraction, { capture: true });
+      document.removeEventListener('mousedown', enableOnInteraction, { capture: true });
     };
   }, []);
 
   const playSound = useCallback((soundKey, volumeOverride = null) => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1108',message:'playSound called',data:{soundKey,audioEnabled:audioEnabledRef.current,hasInstance:!!audioInstancesRef.current[soundKey]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1142',message:'playSound called',data:{soundKey,audioEnabled:audioEnabledRef.current,hasInstance:!!audioInstancesRef.current[soundKey]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
     // #endregion
     
+    // Always try to enable audio if not already enabled
     if (!audioEnabledRef.current) {
-      // Try to enable audio
       audioEnabledRef.current = true;
     }
 
     try {
       const audio = audioInstancesRef.current[soundKey];
       if (audio) {
-        // Clone and play to allow overlapping sounds
-        const clone = audio.cloneNode();
-        if (volumeOverride !== null) clone.volume = volumeOverride;
-        clone.play().then(() => {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1120',message:'Sound played successfully',data:{soundKey,method:'clone'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
-        }).catch((err) => {
-          console.log(`Could not play ${soundKey} sound:`, err);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1123',message:'Sound play failed',data:{soundKey,error:err?.message||String(err),method:'clone'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-          // #endregion
-        });
+        // For mobile: try to play directly first, if that fails, try clone
+        const playAudio = (audioToPlay) => {
+          return audioToPlay.play().then(() => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1156',message:'Sound played successfully',data:{soundKey,method:'direct'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+          }).catch((err) => {
+            // If direct play fails, try clone for overlapping sounds
+            const clone = audioToPlay.cloneNode();
+            if (volumeOverride !== null) clone.volume = volumeOverride;
+            return clone.play().then(() => {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1162',message:'Sound played successfully (clone)',data:{soundKey,method:'clone'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+              // #endregion
+            }).catch((cloneErr) => {
+              console.log(`Could not play ${soundKey} sound:`, cloneErr);
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1166',message:'Sound play failed (both methods)',data:{soundKey,error:cloneErr?.message||String(cloneErr)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+              // #endregion
+            });
+          });
+        };
+        
+        if (volumeOverride !== null) {
+          audio.volume = volumeOverride;
+        }
+        playAudio(audio);
       } else {
         // Fallback: create new audio if preload failed
         let soundSrc = null;
@@ -1181,12 +1211,12 @@ function useAudioManager() {
           audio.volume = volumeOverride !== null ? volumeOverride : (soundKey === 'cardDrop' ? 0.3 : 0.4);
           audio.play().then(() => {
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1137',message:'Sound played successfully (fallback)',data:{soundKey,method:'new'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1180',message:'Sound played successfully (fallback)',data:{soundKey,method:'new'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
             // #endregion
           }).catch((err) => {
             console.log(`Could not play ${soundKey} sound (fallback):`, err);
             // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1140',message:'Sound play failed (fallback)',data:{soundKey,error:err?.message||String(err),method:'new'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1184',message:'Sound play failed (fallback)',data:{soundKey,error:err?.message||String(err),method:'new'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
             // #endregion
           });
         }
@@ -1194,7 +1224,7 @@ function useAudioManager() {
     } catch (err) {
       console.log(`Error playing ${soundKey} sound:`, err);
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1145',message:'Sound play exception',data:{soundKey,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1190',message:'Sound play exception',data:{soundKey,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
       // #endregion
     }
   }, []);
@@ -1816,9 +1846,6 @@ function Game({ state, playerId, socket }) {
                   </div>
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[1]?.name || "?"}</div>
-                <div className="text-xs text-white/60">
-                  Karte: {byRel[1] ? getHandCount(byRel[1].id) : 0} • {byRel[1] ? teamLabel(byRel[1].team, roomPlayers) : ""}
-                </div>
                 {g?.turnSeat === byRel[1]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
 
@@ -1867,9 +1894,6 @@ function Game({ state, playerId, socket }) {
                       </div>
                     ) : null}
                     <div className="text-white/90 font-semibold">{byRel[0]?.name || "Vi"}</div>
-                    <div className="text-xs text-white/60">
-                      Karte: {myHand.length} • {myTeamLabel}
-                    </div>
                   </div>
                   <div className="flex items-end gap-3">
                     <button

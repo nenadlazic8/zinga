@@ -805,7 +805,7 @@ io.on("connection", (socket) => {
       
       if (!safeRoomId) throw new Error("Unesite ID sobe.");
       if (!safeName) throw new Error("Unesite ime.");
-      if (botMode !== "2v2" && botMode !== "1v3") throw new Error("Nevažeći bot mod.");
+      if (botMode !== "2v2") throw new Error("Nevažeći bot mod.");
 
       const room = getOrCreateRoom(safeRoomId);
       room.gameMode = "bots";
@@ -881,24 +881,55 @@ io.on("connection", (socket) => {
         };
         room.players.push(bot2);
       } else {
-        // 1v3: Human + 3 bots (human is alone)
+        // 1v3 mode changed to 2v2: Human + bot partner (across from human) vs 2 bots
+        // Human is at seat 0 (Team A), partner bot is at seat 2 (Team A, across from human)
+        // 2 bots are at seats 1 and 3 (Team B)
         humanPlayer.team = "A";
         humanPlayer.seat = 0;
         
-        for (let i = 0; i < 3; i++) {
-          room.players.push({
-            id: randomUUID(),
-            name: `Bot ${i + 1}`,
-            seat: i + 1,
-            socketId: null,
-            connected: true,
-            team: "B",
-            isBot: true,
-            drink: null,
-            glass: false,
-            cigarette: false
-          });
-        }
+        // Partner bot (across from human, seat 2, Team A)
+        const partnerBot = {
+          id: randomUUID(),
+          name: "Bot Partner",
+          seat: 2,
+          socketId: null,
+          connected: true,
+          team: "A",
+          isBot: true,
+          drink: null,
+          glass: false,
+          cigarette: false
+        };
+        room.players.push(partnerBot);
+        
+        // Opponent bots (seats 1 and 3, Team B)
+        const bot1 = {
+          id: randomUUID(),
+          name: "Bot Protivnik 1",
+          seat: 1,
+          socketId: null,
+          connected: true,
+          team: "B",
+          isBot: true,
+          drink: null,
+          glass: false,
+          cigarette: false
+        };
+        room.players.push(bot1);
+        
+        const bot2 = {
+          id: randomUUID(),
+          name: "Bot Protivnik 2",
+          seat: 3,
+          socketId: null,
+          connected: true,
+          team: "B",
+          isBot: true,
+          drink: null,
+          glass: false,
+          cigarette: false
+        };
+        room.players.push(bot2);
       }
 
       socket.data.roomId = safeRoomId;
