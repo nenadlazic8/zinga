@@ -463,6 +463,7 @@ function applyPlay(room, playerId, cardId) {
         triggerBotPlay(room);
       }, 3000); // Wait for deal animation (slower bot response after deal)
     } else {
+      g.lastAction.isLastCardOfHand = true; // UI: duža animacija, karta u spil
       endGame(room);
     }
   } else {

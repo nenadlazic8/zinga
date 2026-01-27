@@ -1273,6 +1273,7 @@ function Game({ state, playerId, socket }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const [glassShakePlayerId, setGlassShakePlayerId] = useState(null);
   const [ghostCard, setGhostCard] = useState(null); // {card, id} - last taken card ghost
+  const [lastCardTransition, setLastCardTransition] = useState(null); // {card, fromSeat, id} kad je poslednja karta u spil
   
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -1392,6 +1393,20 @@ function Game({ state, playerId, socket }) {
     setHideTalonTopDuringDeal(false);
   }, [isDealing, myHand.length, g?.tableCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Kad je poslednja karta u poslednjem deljenju: duža animacija + "u spil"
+  useEffect(() => {
+    if (state.phase !== "finished") {
+      setLastCardTransition(null);
+      return;
+    }
+    if (!g?.lastAction) return;
+    const a = g.lastAction;
+    if (!a.isLastCardOfHand || a.type !== "drop" || !a.card) return;
+    setLastCardTransition({ card: a.card, fromSeat: a.fromSeat, id: a.id });
+    const t = setTimeout(() => setLastCardTransition(null), 2800);
+    return () => clearTimeout(t);
+  }, [state.phase, g?.lastAction?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Animate last played card + show Zinga / last-deal FX
   useEffect(() => {
     const a = g?.lastAction;
@@ -1408,13 +1423,15 @@ function Game({ state, playerId, socket }) {
       playSound('cardDrop', 0.3);
     }
 
-    // Card flight (always)
+    const isLastInDeal = Boolean(a.isLastCardOfHand && a.type === "drop");
+    // Card flight (always); duža animacija za poslednju kartu u spil
     setFlying({
       id: a.id,
       card: a.card,
       fromRel: rel,
       toOffset: to,
-      hideTop: a.type === "drop" // hide static top until animation ends (prevents double)
+      hideTop: a.type === "drop",
+      durationMs: isLastInDeal ? 1200 : 480
     });
 
     // Animate cards flying to captured pile when cards are taken
@@ -1719,8 +1736,8 @@ function Game({ state, playerId, socket }) {
           </div>
         </div>
 
-        {/* Game Over Overlay */}
-        {state.phase === "finished" && state.match?.winner ? (
+        {/* Game Over Overlay — odloži kad je animacija poslednje karte u spil */}
+        {state.phase === "finished" && state.match?.winner && !lastCardTransition ? (
           <GameOver
             match={state.match}
             players={roomPlayers}
@@ -1805,6 +1822,7 @@ function Game({ state, playerId, socket }) {
                   card={flying.card}
                   fromRel={flying.fromRel}
                   toOffset={flying.toOffset}
+                  durationMs={flying.durationMs ?? 480}
                   onDone={clearFlying}
                 />
               ) : null}
@@ -1870,13 +1888,20 @@ function Game({ state, playerId, socket }) {
                   className="flex items-center justify-center"
                   style={{ transform: `translate(${talonOffset.x}px, ${talonOffset.y}px)` }}
                 >
-                  <TalonStack
-                    count={isDealing ? (talonDisplayCount ?? 0) : (g?.tableCount ?? 0)}
-                    topCard={isDealing && hideTalonTopDuringDeal ? null : g?.tableTop ?? null}
-                    seed={(Number(g?.lastAction?.id || 1) * 13) ^ (g?.tableCount ?? 0)}
-                    hideTop={Boolean(flying?.hideTop && g?.tableTop?.id === flying?.card?.id)}
-                    ghostCard={ghostCard?.card}
-                  />
+                  {lastCardTransition ? (
+                    <div className="text-center pointer-events-none">
+                      <Card card={lastCardTransition.card} compact={isMobile} />
+                      <div className="text-white/90 text-sm mt-2 font-medium">Odigrano — u spil</div>
+                    </div>
+                  ) : (
+                    <TalonStack
+                      count={isDealing ? (talonDisplayCount ?? 0) : (g?.tableCount ?? 0)}
+                      topCard={isDealing && hideTalonTopDuringDeal ? null : g?.tableTop ?? null}
+                      seed={(Number(g?.lastAction?.id || 1) * 13) ^ (g?.tableCount ?? 0)}
+                      hideTop={Boolean(flying?.hideTop && g?.tableTop?.id === flying?.card?.id)}
+                      ghostCard={ghostCard?.card}
+                    />
+                  )}
                 </div>
               </div>
 

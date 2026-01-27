@@ -44,7 +44,7 @@ export function teamForSeat(seat) {
 /**
  * Compute team score from captured cards
  * Scoring rules:
- * - A, K, Q, J, 10: 1 point each (except 10♦ = 2 points)
+ * - A, J: 1 point each; K, Q: 0 points; 10♦ = 2 points
  * - 2♣: 2 points
  * - Most cards (27+): +4 points
  * - Zinga (10): +10 points
@@ -59,7 +59,7 @@ export function computeTeamScore(captures) {
 
   for (const card of cards) {
     const { rank, suit } = card;
-    if (rank === "A" || rank === "K" || rank === "Q" || rank === "J") {
+    if (rank === "A" || rank === "J") {
       cardPoints += 1;
     } else if (rank === "10") {
       // 10♦ (Diamonds) = 2 points, other 10s = 0 points
