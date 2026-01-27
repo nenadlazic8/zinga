@@ -5,6 +5,11 @@ import imgSpricer from "./assets/spricer.png";
 import imgPivo from "./assets/pivo.png";
 import imgCasa from "./assets/casa.png";
 import imgCigareta from "./assets/cigareta.png";
+import gameCompletedSound from "./assets/game-completed.wav";
+import gameLostSound from "./assets/game-lost.wav";
+import glassClinkSound from "./assets/glass-clink.wav";
+import cardFlipSound from "./assets/card-flip.mp3";
+import beerOpenSound from "./assets/beer-open.mp3";
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -202,12 +207,38 @@ function GameOver({ match, players, socket, playerId, roomId, onLeave, history }
   const [confettiDone, setConfettiDone] = useState(false);
   const [rematchClicked, setRematchClicked] = useState(false);
   const [leaveClicked, setLeaveClicked] = useState(false);
+  const audioRef = useRef(null);
   const winner = match?.winner;
   const teamNames = useMemo(() => getTeamNames(players || []), [players]);
   const winnerName = winner === "A" ? teamNames.A : teamNames.B;
   const aTotal = match?.totals?.A ?? 0;
   const bTotal = match?.totals?.B ?? 0;
   const readyCount = match?.rematchReadyCount ?? 0;
+
+  // Determine if current player is on winning team
+  const currentPlayer = players?.find((p) => p.id === playerId);
+  const currentPlayerTeam = currentPlayer?.team || "A";
+  const isWinner = currentPlayerTeam === winner;
+
+  // Play sound effect when game ends - different sound for winners vs losers
+  useEffect(() => {
+    if (audioRef.current) {
+      // Set appropriate sound based on whether player won or lost
+      audioRef.current.src = isWinner ? gameCompletedSound : gameLostSound;
+      audioRef.current.volume = 0.5; // Set volume to 50%
+      audioRef.current.play().catch((err) => {
+        // Ignore errors (e.g., user hasn't interacted with page yet)
+        console.log("Could not play sound:", err);
+      });
+    }
+    return () => {
+      // Cleanup: stop audio if component unmounts
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, [isWinner]);
 
   function handleRematch() {
     if (!socket || rematchClicked || leaveClicked) return;
@@ -233,6 +264,7 @@ function GameOver({ match, players, socket, playerId, roomId, onLeave, history }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75">
+      <audio ref={audioRef} preload="auto" />
       <style>{`
         @keyframes confetti-fall {
           0% {
@@ -962,6 +994,16 @@ function Game({ state, playerId, socket }) {
     const to = { x: Math.round((r() - 0.5) * 34), y: Math.round((r() - 0.5) * 22) };
     setTalonOffset(to);
 
+    // Play card flip sound when card is dropped on table
+    if (a.type === "drop") {
+      const audio = new Audio(cardFlipSound);
+      audio.volume = 0.3; // Set volume to 30%
+      audio.play().catch((err) => {
+        // Ignore errors (e.g., user hasn't interacted with page yet)
+        console.log("Could not play card flip sound:", err);
+      });
+    }
+
     // Card flight (always)
     setFlying({
       id: a.id,
@@ -1066,11 +1108,30 @@ function Game({ state, playerId, socket }) {
         setActionError(res?.error || "Gre?ka.");
         return;
       }
-      // Trigger glass shake animation if glass was selected
+      // Trigger glass shake animation and sound if glass was selected
       if (propsGlass) {
         setGlassShakePlayerId(playerId);
         setTimeout(() => setGlassShakePlayerId(null), 500);
+        
+        // Play glass clink sound
+        const audio = new Audio(glassClinkSound);
+        audio.volume = 0.4; // Set volume to 40%
+        audio.play().catch((err) => {
+          // Ignore errors (e.g., user hasn't interacted with page yet)
+          console.log("Could not play glass clink sound:", err);
+        });
       }
+      
+      // Play beer opening sound if spricer was selected
+      if (propsDrink === "spricer") {
+        const audio = new Audio(beerOpenSound);
+        audio.volume = 0.4; // Set volume to 40%
+        audio.play().catch((err) => {
+          // Ignore errors (e.g., user hasn't interacted with page yet)
+          console.log("Could not play beer open sound:", err);
+        });
+      }
+      
       setShowProps(false);
     });
   }
