@@ -760,42 +760,84 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
 
         {/* Bot mode selection */}
         {gameMode === "bots" && players.length === 0 && (
-          <div className="mt-6">
-            <div className="text-sm font-semibold mb-3">Izaberi mod igre:</div>
+          <div className="mt-8">
+            <div className="text-base font-semibold mb-4">Izaberi mod igre:</div>
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => {
+                  if (!name.trim()) {
+                    setError("Unesite ime.");
+                    return;
+                  }
+                  setJoining(true);
+                  setError("");
                   const s = ensureSocket();
-                  s.emit("room:create-bots", { roomId, name, botMode: "2v2" }, (res) => {
-                    if (res?.ok) {
-                      setPlayerId(res.playerId);
-                    } else {
-                      setError(res?.error || "Greska.");
-                    }
-                  });
+                  if (!s || !s.connected) {
+                    setError("Cekam konekciju sa serverom...");
+                    s.once("connect", () => {
+                      s.emit("room:create-bots", { roomId, name, botMode: "2v2" }, (res) => {
+                        setJoining(false);
+                        if (res?.ok) {
+                          setPlayerId(res.playerId);
+                        } else {
+                          setError(res?.error || "Greska.");
+                        }
+                      });
+                    });
+                  } else {
+                    s.emit("room:create-bots", { roomId, name, botMode: "2v2" }, (res) => {
+                      setJoining(false);
+                      if (res?.ok) {
+                        setPlayerId(res.playerId);
+                      } else {
+                        setError(res?.error || "Greska.");
+                      }
+                    });
+                  }
                 }}
                 disabled={joining || !name.trim()}
-                className="rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20 p-4 hover:bg-emerald-500/15 transition disabled:opacity-50"
+                className="rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20 p-6 hover:bg-emerald-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
               >
-                <div className="text-lg font-semibold mb-1">2v2</div>
-                <div className="text-xs text-white/70">Ti + Bot Partner vs 2 Botovi</div>
+                <div className="text-xl font-semibold mb-2">2v2</div>
+                <div className="text-sm text-white/70 leading-relaxed">Ti + Bot Partner vs 2 Botovi</div>
               </button>
               <button
                 onClick={() => {
+                  if (!name.trim()) {
+                    setError("Unesite ime.");
+                    return;
+                  }
+                  setJoining(true);
+                  setError("");
                   const s = ensureSocket();
-                  s.emit("room:create-bots", { roomId, name, botMode: "1v3" }, (res) => {
-                    if (res?.ok) {
-                      setPlayerId(res.playerId);
-                    } else {
-                      setError(res?.error || "Greska.");
-                    }
-                  });
+                  if (!s || !s.connected) {
+                    setError("Cekam konekciju sa serverom...");
+                    s.once("connect", () => {
+                      s.emit("room:create-bots", { roomId, name, botMode: "1v3" }, (res) => {
+                        setJoining(false);
+                        if (res?.ok) {
+                          setPlayerId(res.playerId);
+                        } else {
+                          setError(res?.error || "Greska.");
+                        }
+                      });
+                    });
+                  } else {
+                    s.emit("room:create-bots", { roomId, name, botMode: "1v3" }, (res) => {
+                      setJoining(false);
+                      if (res?.ok) {
+                        setPlayerId(res.playerId);
+                      } else {
+                        setError(res?.error || "Greska.");
+                      }
+                    });
+                  }
                 }}
                 disabled={joining || !name.trim()}
-                className="rounded-xl bg-blue-500/10 ring-1 ring-blue-400/20 p-4 hover:bg-blue-500/15 transition disabled:opacity-50"
+                className="rounded-xl bg-blue-500/10 ring-1 ring-blue-400/20 p-6 hover:bg-blue-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
               >
-                <div className="text-lg font-semibold mb-1">1v3</div>
-                <div className="text-xs text-white/70">Ti sam vs 3 Botovi</div>
+                <div className="text-xl font-semibold mb-2">1v3</div>
+                <div className="text-sm text-white/70 leading-relaxed">Ti sam vs 3 Botovi</div>
               </button>
             </div>
           </div>
@@ -1804,37 +1846,39 @@ function GameModeSelection({ onSelect }) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
       <div className="w-full max-w-2xl">
-        <div className="text-center mb-8">
+        <div className="text-center mb-10">
           <div className="text-4xl font-bold mb-2">Zinga</div>
           <div className="text-white/70 text-lg">Online Kartaska Igra 2v2</div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Multiplayer Option */}
           <button
             onClick={() => onSelect("multiplayer")}
-            className="group rounded-2xl bg-white/5 ring-1 ring-white/10 p-8 hover:bg-white/10 hover:ring-emerald-400/40 transition-all text-left"
+            className="group rounded-2xl bg-white/5 ring-1 ring-white/10 p-10 hover:bg-white/10 hover:ring-emerald-400/40 transition-all text-left transform hover:scale-[1.02]"
           >
-            <div className="text-2xl mb-2">👥 Multiplayer</div>
-            <div className="text-white/70 text-sm mb-4">
+            <div className="text-3xl mb-3">👥</div>
+            <div className="text-2xl font-semibold mb-3">Multiplayer</div>
+            <div className="text-white/70 text-sm mb-6 leading-relaxed">
               Napravi sobu i pozovi prijatelje da igraju. Igra krece kada se povezu 4 igraca.
             </div>
-            <div className="text-emerald-400 text-sm font-semibold group-hover:underline">
-              Igraj sa prijateljima →
+            <div className="text-emerald-400 text-sm font-semibold group-hover:underline flex items-center gap-2">
+              Igraj sa prijateljima <span className="text-lg">→</span>
             </div>
           </button>
 
           {/* Botovi Option */}
           <button
             onClick={() => onSelect("bots")}
-            className="group rounded-2xl bg-white/5 ring-1 ring-white/10 p-8 hover:bg-white/10 hover:ring-emerald-400/40 transition-all text-left"
+            className="group rounded-2xl bg-white/5 ring-1 ring-white/10 p-10 hover:bg-white/10 hover:ring-emerald-400/40 transition-all text-left transform hover:scale-[1.02]"
           >
-            <div className="text-2xl mb-2">🤖 Igraj protiv botova</div>
-            <div className="text-white/70 text-sm mb-4">
+            <div className="text-3xl mb-3">🤖</div>
+            <div className="text-2xl font-semibold mb-3">Igraj protiv botova</div>
+            <div className="text-white/70 text-sm mb-6 leading-relaxed">
               Igraj protiv AI botova. Izaberi da igras sa partnerom botom ili sam protiv 3 botova.
             </div>
-            <div className="text-emerald-400 text-sm font-semibold group-hover:underline">
-              Igraj protiv botova →
+            <div className="text-emerald-400 text-sm font-semibold group-hover:underline flex items-center gap-2">
+              Igraj protiv botova <span className="text-lg">→</span>
             </div>
           </button>
         </div>
@@ -1867,7 +1911,13 @@ export default function App() {
   }, []);
 
   function ensureSocket() {
-    if (socketRef.current) return socketRef.current;
+    if (socketRef.current) {
+      // If socket exists but not connected, try to connect
+      if (!socketRef.current.connected) {
+        socketRef.current.connect();
+      }
+      return socketRef.current;
+    }
     const s = createSocket();
     socketRef.current = s;
     s.on("state", (next) => {
