@@ -1621,7 +1621,7 @@ function Game({ state, playerId, socket }) {
                       onKeyDown={(e) => {
                         if (e.key === "Enter") sendChat();
                       }}
-                      placeholder="Napi?i..."
+                      placeholder="Napisi..."
                       className="bg-transparent outline-none text-sm text-white/90 placeholder:text-white/40 w-44"
                       maxLength={80}
                     />

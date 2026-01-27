@@ -154,24 +154,8 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
   
   // If first player is a bot, start bot play chain
   setTimeout(() => {
-    const currentRoom = rooms.get(room.id);
-    if (!currentRoom || currentRoom.phase !== "playing") return;
-    const currentGame = currentRoom.game;
-    if (!currentGame) return;
-    
-    const firstPlayer = playerBySeat(currentRoom, currentGame.turnSeat);
-    if (firstPlayer && firstPlayer.isBot) {
-      const botCardId = botPlayCard(currentRoom, firstPlayer);
-      if (botCardId) {
-        try {
-          applyPlay(currentRoom, firstPlayer.id, botCardId);
-          broadcastRoom(currentRoom);
-        } catch (err) {
-          console.error("Bot play error:", err);
-        }
-      }
-    }
-  }, 2000); // 2 second delay after game starts
+    triggerBotPlay(room);
+  }, 3000); // 3 second delay after game starts (slower bot start)
 }
 
 function endGame(room) {
@@ -291,10 +275,16 @@ function allHandsEmpty(room) {
 // Bot AI: Take if possible (obligatory), otherwise play random card
 function botPlayCard(room, botPlayer) {
   const g = room.game;
-  if (!g) return null;
+  if (!g) {
+    console.error(`[BOT] botPlayCard: No game for bot ${botPlayer.name}`);
+    return null;
+  }
   
   const hand = g.hands[botPlayer.id] || [];
-  if (hand.length === 0) return null;
+  if (hand.length === 0) {
+    console.log(`[BOT] botPlayCard: Bot ${botPlayer.name} has no cards`);
+    return null;
+  }
   
   const topCard = g.table.length > 0 ? g.table[g.table.length - 1] : null;
   
@@ -303,19 +293,23 @@ function botPlayCard(room, botPlayer) {
     // Try to match the top card (same rank) - OBLIGATORY
     const matchingCard = hand.find((c) => c.rank === topCard.rank);
     if (matchingCard) {
+      console.log(`[BOT] ${botPlayer.name} taking cards with matching ${matchingCard.rank}`);
       return matchingCard.id;
     }
     
     // Try Jack to take all - OBLIGATORY if table has cards
     const jack = hand.find((c) => c.rank === "J");
     if (jack && g.table.length > 0) {
+      console.log(`[BOT] ${botPlayer.name} taking all with Jack`);
       return jack.id;
     }
   }
   
   // Strategy 2: If we can't take, play a random card
   const randomIndex = Math.floor(Math.random() * hand.length);
-  return hand[randomIndex]?.id || null;
+  const selectedCard = hand[randomIndex];
+  console.log(`[BOT] ${botPlayer.name} playing random card: ${selectedCard?.label || 'none'}`);
+  return selectedCard?.id || null;
 }
 
 function applyPlay(room, playerId, cardId) {
@@ -453,48 +447,75 @@ function applyPlay(room, playerId, cardId) {
       // Deal event for UI animations (and last deal marker)
       const isLast = before > 0 && g.deck.length === 0;
       g.lastDeal = { id: nextActionId(room), isLast, round: g.round, hand: room.match?.hand ?? null };
+      
+      // After dealing, check if next player is a bot
+      setTimeout(() => {
+        triggerBotPlay(room);
+      }, 3000); // Wait for deal animation (slower bot response after deal)
     } else {
       endGame(room);
     }
   } else {
     // Check if next player is a bot and make them play
-    const nextPlayer = playerBySeat(room, g.turnSeat);
-    if (nextPlayer && nextPlayer.isBot && room.phase === "playing") {
-      // Bot's turn - play after a short delay
-      setTimeout(() => {
-        const currentRoom = rooms.get(room.id);
-        if (!currentRoom || currentRoom.phase !== "playing") return;
-        const currentGame = currentRoom.game;
-        if (!currentGame || currentGame.turnSeat !== nextPlayer.seat) return;
-        
-        const botCardId = botPlayCard(currentRoom, nextPlayer);
-        if (botCardId) {
-          try {
-            applyPlay(currentRoom, nextPlayer.id, botCardId);
-            broadcastRoom(currentRoom);
-            
-            // Continue bot turns if needed (recursive but with delay)
-            const nextBotPlayer = playerBySeat(currentRoom, currentGame.turnSeat);
-            if (nextBotPlayer && nextBotPlayer.isBot && currentRoom.phase === "playing") {
-              setTimeout(() => {
-                const botCardId2 = botPlayCard(currentRoom, nextBotPlayer);
-                if (botCardId2) {
-                  try {
-                    applyPlay(currentRoom, nextBotPlayer.id, botCardId2);
-                    broadcastRoom(currentRoom);
-                  } catch (err) {
-                    console.error("Bot play error:", err);
-                  }
-                }
-              }, 1000);
-            }
-          } catch (err) {
-            console.error("Bot play error:", err);
-          }
-        }
-      }, 1500); // 1.5 second delay for bot to "think"
-    }
+    triggerBotPlay(room);
   }
+}
+
+// Helper function to trigger bot play (recursive for consecutive bots)
+function triggerBotPlay(room) {
+  const g = room.game;
+  if (!g || room.phase !== "playing") {
+    console.log(`[BOT] triggerBotPlay: Game not ready (phase: ${room.phase})`);
+    return;
+  }
+  
+  const nextPlayer = playerBySeat(room, g.turnSeat);
+  if (!nextPlayer) {
+    console.log(`[BOT] triggerBotPlay: No player at seat ${g.turnSeat}`);
+    return;
+  }
+  
+  if (!nextPlayer.isBot) {
+    console.log(`[BOT] triggerBotPlay: Player ${nextPlayer.name} is not a bot`);
+    return;
+  }
+  
+  console.log(`[BOT] triggerBotPlay: Bot ${nextPlayer.name} (seat ${nextPlayer.seat}) will play`);
+  
+  // Bot's turn - play after a short delay
+  setTimeout(() => {
+    const currentRoom = rooms.get(room.id);
+    if (!currentRoom || currentRoom.phase !== "playing") {
+      console.log(`[BOT] triggerBotPlay timeout: Room phase changed to ${currentRoom?.phase}`);
+      return;
+    }
+    const currentGame = currentRoom.game;
+    if (!currentGame) {
+      console.log(`[BOT] triggerBotPlay timeout: No game object`);
+      return;
+    }
+    
+    // Double-check it's still this bot's turn
+    const currentTurnPlayer = playerBySeat(currentRoom, currentGame.turnSeat);
+    if (!currentTurnPlayer || currentTurnPlayer.id !== nextPlayer.id || !currentTurnPlayer.isBot) {
+      console.log(`[BOT] triggerBotPlay timeout: Turn changed (expected ${nextPlayer.id}, got ${currentTurnPlayer?.id})`);
+      return;
+    }
+    
+    const botCardId = botPlayCard(currentRoom, currentTurnPlayer);
+    if (botCardId) {
+      try {
+        console.log(`[BOT] triggerBotPlay: Bot ${currentTurnPlayer.name} playing card ${botCardId}`);
+        applyPlay(currentRoom, currentTurnPlayer.id, botCardId);
+        broadcastRoom(currentRoom);
+        // applyPlay will call triggerBotPlay again if next player is also a bot
+      } catch (err) {
+        console.error(`[BOT] Bot play error for ${currentTurnPlayer.name}:`, err);
+      }
+    } else {
+      console.error(`[BOT] Bot ${currentTurnPlayer.name} has no card to play (hand empty?)`);
+    }
+  }, 2500); // 2.5 second delay for bot to "think" (slower gameplay)
 }
 
 function sanitizeStateFor(room, viewerPlayerId) {
