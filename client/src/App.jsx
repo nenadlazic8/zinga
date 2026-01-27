@@ -712,10 +712,13 @@ function CapturedCardsModal({ open, onClose, title, cards }) {
   );
 }
 
-function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state, gameMode, onBack }) {
+function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state, gameMode, onBack, ensureSocket, selectedBotMode, setSelectedBotMode, setPlayerId, setJoining, setError }) {
   const players = state?.players || [];
   const teamA = players.filter((p) => p.team === "A");
   const teamB = players.filter((p) => p.team === "B");
+
+  // Debug logging
+  console.log("Lobby render:", { gameMode, selectedBotMode, playersLength: players.length, hasSetSelectedBotMode: !!setSelectedBotMode });
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -798,7 +801,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
         )}
 
         {/* Start bot game button */}
-        {gameMode === "bots" && selectedBotMode && players.length === 0 && (
+        {gameMode === "bots" && selectedBotMode && players.length === 0 && setSelectedBotMode && setPlayerId && (
           <div className="mt-8">
             <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-6 mb-4">
               <div className="text-base font-semibold mb-2">
@@ -814,23 +817,27 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                   setError("Unesite ime.");
                   return;
                 }
+                if (!setJoining || !setError || !setPlayerId) {
+                  console.error("Missing required functions:", { setJoining: !!setJoining, setError: !!setError, setPlayerId: !!setPlayerId });
+                  return;
+                }
                 setJoining(true);
                 setError("");
                 const s = ensureSocket();
                 const handleResponse = (res) => {
-                  setJoining(false);
+                  if (setJoining) setJoining(false);
                   console.log("Bot creation response:", res);
                   if (res?.ok) {
                     console.log("Setting playerId:", res.playerId);
-                    setPlayerId(res.playerId);
+                    if (setPlayerId) setPlayerId(res.playerId);
                     // State will be updated via socket "state" event
                   } else {
-                    setError(res?.error || "Greska.");
+                    if (setError) setError(res?.error || "Greska.");
                   }
                 };
                 
                 if (!s || !s.connected) {
-                  setError("Cekam konekciju sa serverom...");
+                  if (setError) setError("Cekam konekciju sa serverom...");
                   s.once("connect", () => {
                     console.log("Socket connected, emitting room:create-bots");
                     s.emit("room:create-bots", { roomId, name, botMode: selectedBotMode }, handleResponse);
@@ -2019,6 +2026,8 @@ export default function App() {
         selectedBotMode={selectedBotMode}
         setSelectedBotMode={setSelectedBotMode}
         setPlayerId={setPlayerId}
+        setJoining={setJoining}
+        setError={setError}
       />
     );
   }
