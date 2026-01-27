@@ -249,7 +249,7 @@ function GameOver({ match, players, socket, playerId, roomId, onLeave, history }
       {confettiDone && (
         <div className="text-center space-y-6 animate-fade-in">
           <div className="text-6xl font-bold text-yellow-400 drop-shadow-[0_0_20px_rgba(255,215,0,0.8)]">
-            ?? POBEDNIK IGRE ??
+🏆 POBEDNIK IGRE 🏆
           </div>
           <div className="text-4xl font-semibold text-white mt-4">{winnerName}</div>
           <div className="text-2xl text-white/80 mt-6">
@@ -303,7 +303,7 @@ function GameOver({ match, players, socket, playerId, roomId, onLeave, history }
             </button>
           </div>
           {readyCount > 0 && readyCount < 4 && rematchClicked && (
-            <div className="text-white/60 text-sm mt-2">Spremno: {readyCount}/4 igra??a</div>
+            <div className="text-white/60 text-sm mt-2">Spremno: {readyCount}/4 igraca</div>
           )}
         </div>
       )}
@@ -868,7 +868,7 @@ function Game({ state, playerId, socket }) {
   const teamNames = useMemo(() => getTeamNames(roomPlayers), [roomPlayers]);
   const myTeamLabel = myTeam === "A" ? teamNames.A : teamNames.B;
 
-  // Dealing animation (one-by-one reveal) ??? driven by server deal event
+  // Dealing animation (one-by-one reveal) - driven by server deal event
   const latestHandLenRef = useRef(0);
   const latestTableCountRef = useRef(0);
   latestHandLenRef.current = myHand.length;
@@ -1354,7 +1354,7 @@ function Game({ state, playerId, socket }) {
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[2]?.name || "?"}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {byRel[2] ? getHandCount(byRel[2].id) : 0} ? {byRel[2] ? teamLabel(byRel[2].team, roomPlayers) : ""}
+                  Karte: {byRel[2] ? getHandCount(byRel[2].id) : 0} • {byRel[2] ? teamLabel(byRel[2].team, roomPlayers) : ""}
                 </div>
                 {g?.turnSeat === byRel[2]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
@@ -1372,7 +1372,7 @@ function Game({ state, playerId, socket }) {
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[1]?.name || "?"}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {byRel[1] ? getHandCount(byRel[1].id) : 0} ? {byRel[1] ? teamLabel(byRel[1].team, roomPlayers) : ""}
+                  Karte: {byRel[1] ? getHandCount(byRel[1].id) : 0} • {byRel[1] ? teamLabel(byRel[1].team, roomPlayers) : ""}
                 </div>
                 {g?.turnSeat === byRel[1]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
@@ -1390,7 +1390,7 @@ function Game({ state, playerId, socket }) {
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[3]?.name || "?"}</div>
                 <div className="text-xs text-white/60">
-                  Karte: {byRel[3] ? getHandCount(byRel[3].id) : 0} ? {byRel[3] ? teamLabel(byRel[3].team, roomPlayers) : ""}
+                  Karte: {byRel[3] ? getHandCount(byRel[3].id) : 0} • {byRel[3] ? teamLabel(byRel[3].team, roomPlayers) : ""}
                 </div>
                 {g?.turnSeat === byRel[3]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
@@ -1426,7 +1426,7 @@ function Game({ state, playerId, socket }) {
                     ) : null}
                     <div className="text-white/90 font-semibold">{byRel[0]?.name || "Vi"}</div>
                     <div className="text-xs text-white/60">
-                      Karte: {myHand.length} ? {myTeamLabel}
+                      Karte: {myHand.length} • {myTeamLabel}
                     </div>
                   </div>
                   <div className="flex items-end gap-3">
@@ -1474,33 +1474,69 @@ function Game({ state, playerId, socket }) {
 
           {/* Sidebar */}
           <div className="rounded-3xl bg-white/5 ring-1 ring-white/10 p-4 h-fit">
-            <div className="text-sm font-semibold">Rezultat</div>
+            <div className="text-sm font-semibold mb-3">Rezultat</div>
+            
+            {/* Progress bars to 101 */}
             {state?.match ? (
-              <div className="mt-2 text-xs text-white/70">
-                Ukupno do {state.match.target}: <span className="font-semibold">{teamNames.A} {state.match.totals.A}</span> ?{" "}
-                <span className="font-semibold">{teamNames.B} {state.match.totals.B}</span>
+              <div className="space-y-3 mb-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-white/70">{teamNames.A}</span>
+                    <span className="text-xs font-semibold text-white">{state.match.totals.A} / {state.match.target}</span>
+                  </div>
+                  <div className="h-2 bg-black/30 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500 transition-all duration-500 ease-out rounded-full"
+                      style={{ width: `${Math.min(100, (state.match.totals.A / state.match.target) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-white/70">{teamNames.B}</span>
+                    <span className="text-xs font-semibold text-white">{state.match.totals.B} / {state.match.target}</span>
+                  </div>
+                  <div className="h-2 bg-black/30 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-blue-500 transition-all duration-500 ease-out rounded-full"
+                      style={{ width: `${Math.min(100, (state.match.totals.B / state.match.target) * 100)}%` }}
+                    />
+                  </div>
+                </div>
               </div>
             ) : null}
+
+            {/* Current hand scores */}
             <div className="mt-3 grid grid-cols-2 gap-3">
               <div className={["rounded-2xl p-3 ring-1", myTeam === "A" ? "bg-emerald-400/10 ring-emerald-400/20" : "bg-black/20 ring-white/10"].join(" ")}>
                 <div className="text-xs text-white/60">{teamNames.A}</div>
                 <div className="mt-1 text-lg font-semibold">{g?.captures?.A?.total ?? 0}</div>
-                <div className="text-xs text-white/60">
-                  Karte: {g?.captures?.A?.cardsCount ?? 0} ? Zinga: {g?.captures?.A?.zinga10 ?? 0} ? Zandar: {g?.captures?.A?.zinga20 ?? 0}
+                <div className="mt-2 space-y-1 text-xs text-white/60">
+                  <div>Karte: {g?.captures?.A?.cardsCount ?? 0}</div>
+                  <div className="flex items-center gap-2">
+                    <span>Zinga:</span>
+                    <span className="font-semibold text-emerald-300">{(g?.captures?.A?.zinga10 ?? 0) + (g?.captures?.A?.zinga20 ?? 0)}</span>
+                    <span className="text-white/40">({g?.captures?.A?.zinga10 ?? 0}+{g?.captures?.A?.zinga20 ?? 0})</span>
+                  </div>
                 </div>
               </div>
               <div className={["rounded-2xl p-3 ring-1", myTeam === "B" ? "bg-emerald-400/10 ring-emerald-400/20" : "bg-black/20 ring-white/10"].join(" ")}>
                 <div className="text-xs text-white/60">{teamNames.B}</div>
                 <div className="mt-1 text-lg font-semibold">{g?.captures?.B?.total ?? 0}</div>
-                <div className="text-xs text-white/60">
-                  Karte: {g?.captures?.B?.cardsCount ?? 0} ? Zinga: {g?.captures?.B?.zinga10 ?? 0} ? Zandar: {g?.captures?.B?.zinga20 ?? 0}
+                <div className="mt-2 space-y-1 text-xs text-white/60">
+                  <div>Karte: {g?.captures?.B?.cardsCount ?? 0}</div>
+                  <div className="flex items-center gap-2">
+                    <span>Zinga:</span>
+                    <span className="font-semibold text-emerald-300">{(g?.captures?.B?.zinga10 ?? 0) + (g?.captures?.B?.zinga20 ?? 0)}</span>
+                    <span className="text-white/40">({g?.captures?.B?.zinga10 ?? 0}+{g?.captures?.B?.zinga20 ?? 0})</span>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-white/70">
               <div className="rounded-2xl bg-black/20 ring-1 ring-white/10 p-3">
-                <div className="text-white/60">?pil</div>
+                <div className="text-white/60">Spil</div>
                 <div className="mt-1 font-semibold text-white">{g?.deckCount ?? 0}</div>
                 {g?.deckCount === 0 ? <div className="mt-1 text-[11px] text-red-200 font-semibold">Poslednje deljenje</div> : null}
               </div>
