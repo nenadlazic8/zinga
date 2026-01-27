@@ -604,7 +604,15 @@ function sanitizeStateFor(room, viewerPlayerId) {
 }
 
 function broadcastRoom(room) {
+  // Also broadcast to all sockets in the room (for players who just joined)
+  const roomState = sanitizeStateFor(room, null);
+  if (roomState) {
+    io.to(room.id).emit("state", roomState);
+  }
+  
+  // Send personalized state to each player
   for (const p of room.players) {
+    if (!p.socketId) continue; // Skip bots
     try {
       const state = sanitizeStateFor(room, p.id);
       if (state) {

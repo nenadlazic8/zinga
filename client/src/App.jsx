@@ -772,27 +772,27 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                   setJoining(true);
                   setError("");
                   const s = ensureSocket();
+                  const handleResponse = (res) => {
+                    setJoining(false);
+                    console.log("Bot creation response:", res);
+                    if (res?.ok) {
+                      console.log("Setting playerId:", res.playerId);
+                      setPlayerId(res.playerId);
+                      // State will be updated via socket "state" event
+                    } else {
+                      setError(res?.error || "Greska.");
+                    }
+                  };
+                  
                   if (!s || !s.connected) {
                     setError("Cekam konekciju sa serverom...");
                     s.once("connect", () => {
-                      s.emit("room:create-bots", { roomId, name, botMode: "2v2" }, (res) => {
-                        setJoining(false);
-                        if (res?.ok) {
-                          setPlayerId(res.playerId);
-                        } else {
-                          setError(res?.error || "Greska.");
-                        }
-                      });
+                      console.log("Socket connected, emitting room:create-bots");
+                      s.emit("room:create-bots", { roomId, name, botMode: "2v2" }, handleResponse);
                     });
                   } else {
-                    s.emit("room:create-bots", { roomId, name, botMode: "2v2" }, (res) => {
-                      setJoining(false);
-                      if (res?.ok) {
-                        setPlayerId(res.playerId);
-                      } else {
-                        setError(res?.error || "Greska.");
-                      }
-                    });
+                    console.log("Socket already connected, emitting room:create-bots");
+                    s.emit("room:create-bots", { roomId, name, botMode: "2v2" }, handleResponse);
                   }
                 }}
                 disabled={joining || !name.trim()}
@@ -810,27 +810,27 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                   setJoining(true);
                   setError("");
                   const s = ensureSocket();
+                  const handleResponse = (res) => {
+                    setJoining(false);
+                    console.log("Bot creation response:", res);
+                    if (res?.ok) {
+                      console.log("Setting playerId:", res.playerId);
+                      setPlayerId(res.playerId);
+                      // State will be updated via socket "state" event
+                    } else {
+                      setError(res?.error || "Greska.");
+                    }
+                  };
+                  
                   if (!s || !s.connected) {
                     setError("Cekam konekciju sa serverom...");
                     s.once("connect", () => {
-                      s.emit("room:create-bots", { roomId, name, botMode: "1v3" }, (res) => {
-                        setJoining(false);
-                        if (res?.ok) {
-                          setPlayerId(res.playerId);
-                        } else {
-                          setError(res?.error || "Greska.");
-                        }
-                      });
+                      console.log("Socket connected, emitting room:create-bots");
+                      s.emit("room:create-bots", { roomId, name, botMode: "1v3" }, handleResponse);
                     });
                   } else {
-                    s.emit("room:create-bots", { roomId, name, botMode: "1v3" }, (res) => {
-                      setJoining(false);
-                      if (res?.ok) {
-                        setPlayerId(res.playerId);
-                      } else {
-                        setError(res?.error || "Greska.");
-                      }
-                    });
+                    console.log("Socket already connected, emitting room:create-bots");
+                    s.emit("room:create-bots", { roomId, name, botMode: "1v3" }, handleResponse);
                   }
                 }}
                 disabled={joining || !name.trim()}
@@ -1921,6 +1921,7 @@ export default function App() {
     const s = createSocket();
     socketRef.current = s;
     s.on("state", (next) => {
+      console.log("Received state event:", next?.phase, next?.roomId);
       if (next) {
         // Validate state before setting
         if (next.phase === "playing" && !next.game) {
@@ -1928,6 +1929,7 @@ export default function App() {
           setError("Greska: Igra nije spremna. Cekam podatke od servera...");
           return;
         }
+        console.log("Setting state:", next.phase, "players:", next.players?.length);
         setState(next);
         setError(""); // Clear any previous errors
       }
