@@ -13,6 +13,7 @@ import beerOpenSound from "./assets/beer-open.mp3";
 import pivoOpenSound from "./assets/pivo-open.mp3";
 import victoryFanfareSound from "./assets/victory-fanfare.mp3";
 import cardsTakenSound from "./assets/cards-taken.wav";
+import cardDealSound from "./assets/card-deal.mp3";
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -29,13 +30,11 @@ function mulberry32(seed) {
 }
 
 function getTeamNames(players) {
-  const p1 = players.find((p) => p.seat === 0)?.name || "?";
-  const p2 = players.find((p) => p.seat === 1)?.name || "?";
-  const p3 = players.find((p) => p.seat === 2)?.name || "?";
-  const p4 = players.find((p) => p.seat === 3)?.name || "?";
+  const teamA = players.filter((p) => p.team === "A").map((p) => p.name);
+  const teamB = players.filter((p) => p.team === "B").map((p) => p.name);
   return {
-    A: `Tim ${p1} + ${p3}`,
-    B: `Tim ${p2} + ${p4}`
+    A: teamA.length > 0 ? `Tim ${teamA.join(" + ")}` : "Tim A",
+    B: teamB.length > 0 ? `Tim ${teamB.join(" + ")}` : "Tim B"
   };
 }
 
@@ -713,21 +712,30 @@ function CapturedCardsModal({ open, onClose, title, cards }) {
   );
 }
 
-function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state }) {
+function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state, gameMode, onBack }) {
   const players = state?.players || [];
+  const teamA = players.filter((p) => p.team === "A");
+  const teamB = players.filter((p) => p.team === "B");
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-xl rounded-2xl bg-white/5 ring-1 ring-white/10 p-6">
-        <div className="flex items-start justify-between gap-4">
+      <div className="w-full max-w-2xl rounded-2xl bg-white/5 ring-1 ring-white/10 p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <div className="text-2xl font-semibold">Zinga</div>
-            <div className="text-white/70 text-sm mt-1">Online kartaska igra 2v2 (osnovni engine)</div>
+            <div className="text-white/70 text-sm mt-1">
+              {gameMode === "bots" ? "Igraj protiv botova" : "Online kartaska igra 2v2"}
+            </div>
           </div>
-          <div className="text-xs text-white/60">UI: srpski</div>
+          <button
+            onClick={onBack}
+            className="text-xs text-white/60 hover:text-white/80 transition"
+          >
+            ← Nazad
+          </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block">
             <div className="text-sm text-white/80 mb-1">Ime</div>
             <input
@@ -750,82 +758,222 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
 
         {error ? <div className="mt-3 text-sm text-red-300">{error}</div> : null}
 
-        <button
-          type="button"
-          onClick={onJoin}
-          disabled={joining}
-          className={[
-            "mt-5 w-full rounded-xl px-4 py-2.5 font-semibold",
-            "bg-emerald-500 text-black hover:bg-emerald-400 active:bg-emerald-500",
-            "disabled:opacity-60 disabled:cursor-not-allowed transition"
-          ].join(" ")}
-        >
-          {joining ? "Povezivanje..." : "Udji / napravi sobu"}
-        </button>
+        {/* Bot mode selection */}
+        {gameMode === "bots" && players.length === 0 && (
+          <div className="mt-6">
+            <div className="text-sm font-semibold mb-3">Izaberi mod igre:</div>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => {
+                  const s = ensureSocket();
+                  s.emit("room:create-bots", { roomId, name, botMode: "2v2" }, (res) => {
+                    if (res?.ok) {
+                      setPlayerId(res.playerId);
+                    } else {
+                      setError(res?.error || "Greska.");
+                    }
+                  });
+                }}
+                disabled={joining || !name.trim()}
+                className="rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20 p-4 hover:bg-emerald-500/15 transition disabled:opacity-50"
+              >
+                <div className="text-lg font-semibold mb-1">2v2</div>
+                <div className="text-xs text-white/70">Ti + Bot Partner vs 2 Botovi</div>
+              </button>
+              <button
+                onClick={() => {
+                  const s = ensureSocket();
+                  s.emit("room:create-bots", { roomId, name, botMode: "1v3" }, (res) => {
+                    if (res?.ok) {
+                      setPlayerId(res.playerId);
+                    } else {
+                      setError(res?.error || "Greska.");
+                    }
+                  });
+                }}
+                disabled={joining || !name.trim()}
+                className="rounded-xl bg-blue-500/10 ring-1 ring-blue-400/20 p-4 hover:bg-blue-500/15 transition disabled:opacity-50"
+              >
+                <div className="text-lg font-semibold mb-1">1v3</div>
+                <div className="text-xs text-white/70">Ti sam vs 3 Botovi</div>
+              </button>
+            </div>
+          </div>
+        )}
 
-        <div className="mt-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Igrac i u sobi</div>
-            <div className="text-xs text-white/60">Igra krece kada se povezu 4 igraca.</div>
+        {/* Show teams before joining */}
+        {players.length > 0 && (
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <div className="rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20 p-4">
+              <div className="text-sm font-semibold mb-2">Tim A</div>
+              <div className="space-y-1">
+                {teamA.length > 0 ? (
+                  teamA.map((p) => (
+                    <div key={p.id} className="text-xs text-white/80">
+                      {p.name} {p.isBot ? "🤖" : ""}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-white/40">Prazan</div>
+                )}
+              </div>
+            </div>
+            <div className="rounded-xl bg-blue-500/10 ring-1 ring-blue-400/20 p-4">
+              <div className="text-sm font-semibold mb-2">Tim B</div>
+              <div className="space-y-1">
+                {teamB.length > 0 ? (
+                  teamB.map((p) => (
+                    <div key={p.id} className="text-xs text-white/80">
+                      {p.name} {p.isBot ? "🤖" : ""}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-white/40">Prazan</div>
+                )}
+              </div>
+            </div>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {Array.from({ length: 4 }).map((_, i) => {
-              const p = players.find((x) => x.seat === i);
-              return (
-                <div key={i} className="rounded-xl bg-black/25 ring-1 ring-white/10 p-3">
-                  <div className="text-xs text-white/60">Mesto {i + 1}</div>
-                  <div className="mt-1 font-semibold">{p ? p.name : "?"}</div>
-                  {p ? <div className="text-xs text-white/60">{teamLabel(p.team, players)}</div> : <div className="text-xs text-white/40">Ceka se...</div>}
-                </div>
-              );
-            })}
-          </div>
-        </div>
+        )}
+
+        {/* Join button - only for multiplayer */}
+        {gameMode === "multiplayer" && (
+          <button
+            type="button"
+            onClick={onJoin}
+            disabled={joining || !name.trim()}
+            className={[
+              "mt-5 w-full rounded-xl px-4 py-2.5 font-semibold",
+              "bg-emerald-500 text-black hover:bg-emerald-400 active:bg-emerald-500",
+              "disabled:opacity-60 disabled:cursor-not-allowed transition"
+            ].join(" ")}
+          >
+            {joining ? "Povezivanje..." : "Udji u sobu"}
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
-function WaitingRoom({ state, playerId }) {
+function WaitingRoom({ state, playerId, socket }) {
   const players = state?.players || [];
   const me = players.find((p) => p.id === playerId);
+  const teamA = players.filter((p) => p.team === "A");
+  const teamB = players.filter((p) => p.team === "B");
+  const playersWithoutTeam = players.filter((p) => !p.team);
   const missing = Math.max(0, 4 - players.length);
+  const canStart = players.length === 4 && teamA.length === 2 && teamB.length === 2;
+
+  function selectTeam(team) {
+    if (!socket || !me || me.team) return; // Already has team
+    socket.emit("room:select-team", { team }, (res) => {
+      if (!res?.ok) {
+        console.error("Failed to select team:", res?.error);
+      }
+    });
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
-      <div className="w-full max-w-xl rounded-2xl bg-white/5 ring-1 ring-white/10 p-6">
-        <div className="flex items-start justify-between gap-4">
+      <div className="w-full max-w-2xl rounded-2xl bg-white/5 ring-1 ring-white/10 p-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <div className="text-2xl font-semibold">Zinga</div>
             <div className="text-white/70 text-sm mt-1">
-              Povezani ste{me ? ` kao ${me.name} (mesto ${me.seat + 1})` : ""}. Soba: <span className="font-semibold">{state.roomId}</span>
+              Povezani ste{me ? ` kao ${me.name}` : ""}. Soba: <span className="font-semibold">{state.roomId}</span>
             </div>
           </div>
-          <SeatBadge label={missing === 0 ? "Start" : `Ceka se mesto: ${missing}`} active={missing === 0} />
+          <SeatBadge label={canStart ? "Spremno" : `Ceka se: ${missing} igrac`} active={canStart} />
         </div>
 
-        <div className="mt-5 text-sm text-white/70">
-          Igra pocinje automatski kada se povezu 4 igraca. Timovi su fiksni: Tim A (1 i 3), Tim B (2 i 4).
-        </div>
-
-        <div className="mt-6">
-          <div className="flex items-center justify-between">
-            <div className="text-sm font-semibold">Igrac i u sobi</div>
-            <div className="text-xs text-white/60">Status: Lobby</div>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            {Array.from({ length: 4 }).map((_, i) => {
-              const p = players.find((x) => x.seat === i);
-              return (
-                <div key={i} className="rounded-xl bg-black/25 ring-1 ring-white/10 p-3">
-                  <div className="text-xs text-white/60">Mesto {i + 1}</div>
-                  <div className="mt-1 font-semibold">{p ? p.name : "?"}</div>
-                  {p ? <div className="text-xs text-white/60">{teamLabel(p.team, players)}</div> : <div className="text-xs text-white/40">Ceka se...</div>}
+        {/* Team Selection - only if player doesn't have a team */}
+        {me && !me.team && (
+          <div className="mt-6">
+            <div className="text-sm font-semibold mb-3">Izaberi tim:</div>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                onClick={() => selectTeam("A")}
+                disabled={teamA.length >= 2}
+                className={[
+                  "rounded-xl p-4 ring-1 transition",
+                  teamA.length >= 2
+                    ? "bg-black/20 ring-white/10 opacity-50 cursor-not-allowed"
+                    : "bg-emerald-500/10 ring-emerald-400/20 hover:bg-emerald-500/15"
+                ].join(" ")}
+              >
+                <div className="text-lg font-semibold mb-1">Tim A</div>
+                <div className="text-xs text-white/60">
+                  {teamA.length}/2 igraca
                 </div>
-              );
-            })}
+                {teamA.length > 0 && (
+                  <div className="mt-2 text-xs text-white/80">
+                    {teamA.map((p) => p.name).join(", ")}
+                  </div>
+                )}
+              </button>
+              <button
+                onClick={() => selectTeam("B")}
+                disabled={teamB.length >= 2}
+                className={[
+                  "rounded-xl p-4 ring-1 transition",
+                  teamB.length >= 2
+                    ? "bg-black/20 ring-white/10 opacity-50 cursor-not-allowed"
+                    : "bg-blue-500/10 ring-blue-400/20 hover:bg-blue-500/15"
+                ].join(" ")}
+              >
+                <div className="text-lg font-semibold mb-1">Tim B</div>
+                <div className="text-xs text-white/60">
+                  {teamB.length}/2 igraca
+                </div>
+                {teamB.length > 0 && (
+                  <div className="mt-2 text-xs text-white/80">
+                    {teamB.map((p) => p.name).join(", ")}
+                  </div>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Show current teams */}
+        {players.length > 0 && (
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            <div className="rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20 p-4">
+              <div className="text-sm font-semibold mb-2">Tim A</div>
+              <div className="space-y-1">
+                {teamA.length > 0 ? (
+                  teamA.map((p) => (
+                    <div key={p.id} className="text-xs text-white/80">
+                      {p.name} {p.id === playerId ? "(Vi)" : ""}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-white/40">Prazan</div>
+                )}
+              </div>
+            </div>
+            <div className="rounded-xl bg-blue-500/10 ring-1 ring-blue-400/20 p-4">
+              <div className="text-sm font-semibold mb-2">Tim B</div>
+              <div className="space-y-1">
+                {teamB.length > 0 ? (
+                  teamB.map((p) => (
+                    <div key={p.id} className="text-xs text-white/80">
+                      {p.name} {p.id === playerId ? "(Vi)" : ""}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-xs text-white/40">Prazan</div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {canStart && (
+          <div className="mt-6 text-center text-sm text-emerald-300">
+            Igra ce poceti uskoro...
+          </div>
+        )}
       </div>
     </div>
   );
@@ -925,6 +1073,14 @@ function Game({ state, playerId, socket }) {
     // Start dealing
     setIsDealing(true);
     setHandRevealCount(0);
+
+    // Play card dealing sound when cards are dealt in a new hand
+    const audio = new Audio(cardDealSound);
+    audio.volume = 0.4; // Set volume to 40%
+    audio.play().catch((err) => {
+      // Ignore errors (e.g., user hasn't interacted with page yet)
+      console.log("Could not play card deal sound:", err);
+    });
 
     const isInitial = deal.round === 1;
     if (isInitial) {
@@ -1644,9 +1800,53 @@ function Game({ state, playerId, socket }) {
   );
 }
 
+function GameModeSelection({ onSelect }) {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6">
+      <div className="w-full max-w-2xl">
+        <div className="text-center mb-8">
+          <div className="text-4xl font-bold mb-2">Zinga</div>
+          <div className="text-white/70 text-lg">Online Kartaska Igra 2v2</div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Multiplayer Option */}
+          <button
+            onClick={() => onSelect("multiplayer")}
+            className="group rounded-2xl bg-white/5 ring-1 ring-white/10 p-8 hover:bg-white/10 hover:ring-emerald-400/40 transition-all text-left"
+          >
+            <div className="text-2xl mb-2">👥 Multiplayer</div>
+            <div className="text-white/70 text-sm mb-4">
+              Napravi sobu i pozovi prijatelje da igraju. Igra krece kada se povezu 4 igraca.
+            </div>
+            <div className="text-emerald-400 text-sm font-semibold group-hover:underline">
+              Igraj sa prijateljima →
+            </div>
+          </button>
+
+          {/* Botovi Option */}
+          <button
+            onClick={() => onSelect("bots")}
+            className="group rounded-2xl bg-white/5 ring-1 ring-white/10 p-8 hover:bg-white/10 hover:ring-emerald-400/40 transition-all text-left"
+          >
+            <div className="text-2xl mb-2">🤖 Igraj protiv botova</div>
+            <div className="text-white/70 text-sm mb-4">
+              Igraj protiv AI botova. Izaberi da igras sa partnerom botom ili sam protiv 3 botova.
+            </div>
+            <div className="text-emerald-400 text-sm font-semibold group-hover:underline">
+              Igraj protiv botova →
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const socketRef = useRef(null);
 
+  const [gameMode, setGameMode] = useState(null); // null | "multiplayer" | "bots"
   const [name, setName] = useState("");
   const [roomId, setRoomId] = useState("ZINGA");
   const [joining, setJoining] = useState(false);
@@ -1713,7 +1913,7 @@ export default function App() {
     setError("");
     setJoining(true);
     const s = ensureSocket();
-    s.emit("room:join", { roomId, name }, (res) => {
+    s.emit("room:join", { roomId, name, gameMode }, (res) => {
       setJoining(false);
       if (!res?.ok) {
         setError(res?.error || "Greska.");
@@ -1721,6 +1921,11 @@ export default function App() {
       }
       setPlayerId(res.playerId);
     });
+  }
+
+  // Show game mode selection first
+  if (!gameMode) {
+    return <GameModeSelection onSelect={setGameMode} />;
   }
 
   if (!playerId) {
@@ -1734,6 +1939,9 @@ export default function App() {
         name={name}
         setName={setName}
         state={state}
+        gameMode={gameMode}
+        onBack={() => setGameMode(null)}
+        ensureSocket={ensureSocket}
       />
     );
   }
@@ -1750,7 +1958,7 @@ export default function App() {
   }
 
   if (state.phase === "lobby") {
-    return <WaitingRoom state={state} playerId={playerId} />;
+    return <WaitingRoom state={state} playerId={playerId} socket={socketRef.current} />;
   }
 
   if (state.phase === "aborted" || !state.phase) {

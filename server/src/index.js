@@ -52,8 +52,10 @@ function getOrCreateRoom(roomId) {
     rooms.set(roomId, {
       id: roomId,
       phase: "lobby", // lobby | playing | finished | aborted
-      players: [], // {id, name, seat, socketId, connected}
+      players: [], // {id, name, seat, socketId, connected, team, isBot}
       game: null,
+      gameMode: null, // "multiplayer" | "bots"
+      botConfig: null, // {mode: "2v2" | "1v3"} for bots
       match: {
         target: 101,
         totals: { A: 0, B: 0 },
@@ -149,6 +151,27 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
   }
   // Initial deal event for UI animations
   room.game.lastDeal = { id: nextActionId(room), isLast: false, round: 1, hand: room.match?.hand ?? null };
+  
+  // If first player is a bot, start bot play chain
+  setTimeout(() => {
+    const currentRoom = rooms.get(room.id);
+    if (!currentRoom || currentRoom.phase !== "playing") return;
+    const currentGame = currentRoom.game;
+    if (!currentGame) return;
+    
+    const firstPlayer = playerBySeat(currentRoom, currentGame.turnSeat);
+    if (firstPlayer && firstPlayer.isBot) {
+      const botCardId = botPlayCard(currentRoom, firstPlayer);
+      if (botCardId) {
+        try {
+          applyPlay(currentRoom, firstPlayer.id, botCardId);
+          broadcastRoom(currentRoom);
+        } catch (err) {
+          console.error("Bot play error:", err);
+        }
+      }
+    }
+  }, 2000); // 2 second delay after game starts
 }
 
 function endGame(room) {
@@ -158,8 +181,8 @@ function endGame(room) {
   // Last take: last player who took gets all remaining table cards
   if (g.table.length > 0 && g.lastTakerPlayerId) {
     const lp = findPlayer(room, g.lastTakerPlayerId);
-    if (lp) {
-      const team = teamForSeat(lp.seat);
+    if (lp && lp.team) {
+      const team = lp.team;
       g.captures[team].cards.push(...g.table);
       g.table = [];
       
@@ -265,6 +288,36 @@ function allHandsEmpty(room) {
   return true;
 }
 
+// Bot AI: Take if possible (obligatory), otherwise play random card
+function botPlayCard(room, botPlayer) {
+  const g = room.game;
+  if (!g) return null;
+  
+  const hand = g.hands[botPlayer.id] || [];
+  if (hand.length === 0) return null;
+  
+  const topCard = g.table.length > 0 ? g.table[g.table.length - 1] : null;
+  
+  // Strategy 1: OBLIGATORY - If we can take cards, we MUST do it (match rank or Jack)
+  if (topCard) {
+    // Try to match the top card (same rank) - OBLIGATORY
+    const matchingCard = hand.find((c) => c.rank === topCard.rank);
+    if (matchingCard) {
+      return matchingCard.id;
+    }
+    
+    // Try Jack to take all - OBLIGATORY if table has cards
+    const jack = hand.find((c) => c.rank === "J");
+    if (jack && g.table.length > 0) {
+      return jack.id;
+    }
+  }
+  
+  // Strategy 2: If we can't take, play a random card
+  const randomIndex = Math.floor(Math.random() * hand.length);
+  return hand[randomIndex]?.id || null;
+}
+
 function applyPlay(room, playerId, cardId) {
   const g = room.game;
   if (!g) throw new Error("Igra nije pokrenuta.");
@@ -299,8 +352,8 @@ function applyPlay(room, playerId, cardId) {
 
       // Zinga na Žandara: ONLY when the single talon card is also a Jack (J on J)
       if (tableBeforeLen === 1 && tableBefore[0]?.rank === "J") {
-        const team = teamForSeat(player.seat);
-        g.captures[team].zinga20 += 1;
+        const team = player.team;
+        if (team) g.captures[team].zinga20 += 1;
         zingaFx = 20;
         g.log.push(`${player.name} pravi Zingu na Žandara! (+20)`);
       }
@@ -321,8 +374,8 @@ function applyPlay(room, playerId, cardId) {
 
       // Zinga (Šiba): table had exactly 1 card and it's taken by matching the last card
       if (tableBeforeLen === 1) {
-        const team = teamForSeat(player.seat);
-        g.captures[team].zinga10 += 1;
+        const team = player.team;
+        if (team) g.captures[team].zinga10 += 1;
         zingaFx = 10;
         g.log.push(`${player.name} pravi Zingu! (+10)`);
       } else {
@@ -335,7 +388,11 @@ function applyPlay(room, playerId, cardId) {
   }
 
   if (took) {
-    const team = teamForSeat(player.seat);
+    const team = player.team;
+    if (!team) {
+      console.error("Player", player.id, "has no team!");
+      return; // Safety check
+    }
     g.captures[team].cards.push(...taken);
     g.lastTakerPlayerId = playerId;
     
@@ -399,6 +456,44 @@ function applyPlay(room, playerId, cardId) {
     } else {
       endGame(room);
     }
+  } else {
+    // Check if next player is a bot and make them play
+    const nextPlayer = playerBySeat(room, g.turnSeat);
+    if (nextPlayer && nextPlayer.isBot && room.phase === "playing") {
+      // Bot's turn - play after a short delay
+      setTimeout(() => {
+        const currentRoom = rooms.get(room.id);
+        if (!currentRoom || currentRoom.phase !== "playing") return;
+        const currentGame = currentRoom.game;
+        if (!currentGame || currentGame.turnSeat !== nextPlayer.seat) return;
+        
+        const botCardId = botPlayCard(currentRoom, nextPlayer);
+        if (botCardId) {
+          try {
+            applyPlay(currentRoom, nextPlayer.id, botCardId);
+            broadcastRoom(currentRoom);
+            
+            // Continue bot turns if needed (recursive but with delay)
+            const nextBotPlayer = playerBySeat(currentRoom, currentGame.turnSeat);
+            if (nextBotPlayer && nextBotPlayer.isBot && currentRoom.phase === "playing") {
+              setTimeout(() => {
+                const botCardId2 = botPlayCard(currentRoom, nextBotPlayer);
+                if (botCardId2) {
+                  try {
+                    applyPlay(currentRoom, nextBotPlayer.id, botCardId2);
+                    broadcastRoom(currentRoom);
+                  } catch (err) {
+                    console.error("Bot play error:", err);
+                  }
+                }
+              }, 1000);
+            }
+          } catch (err) {
+            console.error("Bot play error:", err);
+          }
+        }
+      }, 1500); // 1.5 second delay for bot to "think"
+    }
   }
 }
 
@@ -406,17 +501,18 @@ function sanitizeStateFor(room, viewerPlayerId) {
   const g = room.game;
 
   const viewer = viewerPlayerId ? findPlayer(room, viewerPlayerId) : null;
-  const viewerTeam = viewer ? teamForSeat(viewer.seat) : null;
+  const viewerTeam = viewer?.team || null; // Team is now selected by player, not based on seat
 
   const players = room.players
     .slice()
-    .sort((a, b) => a.seat - b.seat)
+    .sort((a, b) => (a.seat ?? 999) - (b.seat ?? 999))
     .map((p) => ({
       id: p.id,
       name: p.name,
-      seat: p.seat,
-      team: teamForSeat(p.seat),
+      seat: p.seat ?? null,
+      team: p.team || null, // Team is now selected by player, not based on seat
       connected: p.connected,
+      isBot: Boolean(p.isBot),
       drink: p.drink || null,
       glass: Boolean(p.glass),
       cigarette: Boolean(p.cigarette)
@@ -521,7 +617,7 @@ function broadcastRoom(room) {
 }
 
 io.on("connection", (socket) => {
-  socket.on("room:join", ({ roomId, name }, ack) => {
+  socket.on("room:join", ({ roomId, name, gameMode }, ack) => {
     try {
       const safeRoomId = String(roomId || "").trim().toUpperCase();
       const safeName = String(name || "").trim();
@@ -530,6 +626,11 @@ io.on("connection", (socket) => {
       if (!safeName) throw new Error("Unesite ime.");
 
       const room = getOrCreateRoom(safeRoomId);
+      
+      // Set game mode if provided and room is empty
+      if (gameMode && room.players.length === 0) {
+        room.gameMode = gameMode;
+      }
       
       // Check if game is in progress and try to reconnect existing player
       if (room.phase !== "lobby") {
@@ -573,7 +674,7 @@ io.on("connection", (socket) => {
         return;
       }
 
-      // New player joining lobby
+      // New player joining lobby - assign seat but no team yet
       const usedSeats = new Set(room.players.map((p) => p.seat));
       let seat = 0;
       while (usedSeats.has(seat) && seat < 4) seat++;
@@ -586,6 +687,8 @@ io.on("connection", (socket) => {
         seat,
         socketId: socket.id,
         connected: true,
+        team: null, // Player will select team
+        isBot: false,
         drink: null, // "spricer" | "pivo" | null
         glass: false,
         cigarette: false
@@ -595,14 +698,179 @@ io.on("connection", (socket) => {
       socket.data.playerId = playerId;
       socket.join(safeRoomId);
 
-      if (room.players.length === 4) {
+      broadcastRoom(room);
+      ack?.({ ok: true, playerId, roomId: safeRoomId });
+    } catch (e) {
+      ack?.({ ok: false, error: e?.message || "Greška." });
+    }
+  });
+
+  // Handle team selection
+  socket.on("room:select-team", ({ team }, ack) => {
+    try {
+      const roomId = socket.data.roomId;
+      const playerId = socket.data.playerId;
+      if (!roomId || !playerId) throw new Error("Niste u sobi.");
+      const room = rooms.get(roomId);
+      if (!room) throw new Error("Soba nije pronađena.");
+      if (room.phase !== "lobby") throw new Error("Igra je već počela.");
+      
+      const p = findPlayer(room, playerId);
+      if (!p) throw new Error("Igrač nije pronađen.");
+      if (p.team) throw new Error("Već ste izabrali tim.");
+      
+      if (team !== "A" && team !== "B") throw new Error("Nevažeći tim.");
+      
+      // Check if team is full
+      const teamCount = room.players.filter((pl) => pl.team === team).length;
+      if (teamCount >= 2) throw new Error(`Tim ${team} je pun.`);
+      
+      p.team = team;
+      
+      // Check if we can start game (4 players, 2 per team)
+      const teamA = room.players.filter((pl) => pl.team === "A");
+      const teamB = room.players.filter((pl) => pl.team === "B");
+      
+      if (room.players.length === 4 && teamA.length === 2 && teamB.length === 2) {
+        // Assign seats based on teams (A: seats 0,2; B: seats 1,3)
+        let seatA = 0;
+        let seatB = 1;
+        for (const pl of room.players) {
+          if (pl.team === "A") {
+            pl.seat = seatA;
+            seatA += 2;
+          } else if (pl.team === "B") {
+            pl.seat = seatB;
+            seatB += 2;
+          }
+        }
+        
         startGame(room);
-        // Broadcast immediately and also after a short delay to ensure all clients receive it
         broadcastRoom(room);
         setTimeout(() => broadcastRoom(room), 100);
       } else {
         broadcastRoom(room);
       }
+      
+      ack?.({ ok: true });
+    } catch (e) {
+      ack?.({ ok: false, error: e?.message || "Greška." });
+    }
+  });
+
+  // Handle bot game creation
+  socket.on("room:create-bots", ({ roomId, name, botMode }, ack) => {
+    try {
+      const safeRoomId = String(roomId || "").trim().toUpperCase();
+      const safeName = String(name || "").trim();
+      
+      if (!safeRoomId) throw new Error("Unesite ID sobe.");
+      if (!safeName) throw new Error("Unesite ime.");
+      if (botMode !== "2v2" && botMode !== "1v3") throw new Error("Nevažeći bot mod.");
+
+      const room = getOrCreateRoom(safeRoomId);
+      room.gameMode = "bots";
+      room.botConfig = { mode: botMode };
+      
+      if (room.phase !== "lobby") throw new Error("Soba je već u upotrebi.");
+      if (room.players.length > 0) throw new Error("Soba nije prazna.");
+
+      // Create human player
+      const playerId = randomUUID();
+      const humanPlayer = {
+        id: playerId,
+        name: safeName,
+        seat: null, // Will be assigned when teams are set
+        socketId: socket.id,
+        connected: true,
+        team: null, // Will be selected
+        isBot: false,
+        drink: null,
+        glass: false,
+        cigarette: false
+      };
+      room.players.push(humanPlayer);
+
+      // Create bots based on mode
+      const botNames = ["Bot1", "Bot2", "Bot3"];
+      if (botMode === "2v2") {
+        // Human + 1 bot vs 2 bots
+        // Human selects team first, then bots fill remaining spots
+        // For now, assign human to Team A, partner bot to Team A, 2 bots to Team B
+        humanPlayer.team = "A";
+        humanPlayer.seat = 0;
+        
+        const partnerBot = {
+          id: randomUUID(),
+          name: "Bot Partner",
+          seat: 2,
+          socketId: null,
+          connected: true,
+          team: "A",
+          isBot: true,
+          drink: null,
+          glass: false,
+          cigarette: false
+        };
+        room.players.push(partnerBot);
+        
+        const bot1 = {
+          id: randomUUID(),
+          name: "Bot Protivnik 1",
+          seat: 1,
+          socketId: null,
+          connected: true,
+          team: "B",
+          isBot: true,
+          drink: null,
+          glass: false,
+          cigarette: false
+        };
+        room.players.push(bot1);
+        
+        const bot2 = {
+          id: randomUUID(),
+          name: "Bot Protivnik 2",
+          seat: 3,
+          socketId: null,
+          connected: true,
+          team: "B",
+          isBot: true,
+          drink: null,
+          glass: false,
+          cigarette: false
+        };
+        room.players.push(bot2);
+      } else {
+        // 1v3: Human + 3 bots (human is alone)
+        humanPlayer.team = "A";
+        humanPlayer.seat = 0;
+        
+        for (let i = 0; i < 3; i++) {
+          room.players.push({
+            id: randomUUID(),
+            name: `Bot ${i + 1}`,
+            seat: i + 1,
+            socketId: null,
+            connected: true,
+            team: "B",
+            isBot: true,
+            drink: null,
+            glass: false,
+            cigarette: false
+          });
+        }
+      }
+
+      socket.data.roomId = safeRoomId;
+      socket.data.playerId = playerId;
+      socket.join(safeRoomId);
+
+      // Start game immediately
+      startGame(room);
+      broadcastRoom(room);
+      setTimeout(() => broadcastRoom(room), 100);
+      
       ack?.({ ok: true, playerId, roomId: safeRoomId });
     } catch (e) {
       ack?.({ ok: false, error: e?.message || "Greška." });
