@@ -759,7 +759,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
         {error ? <div className="mt-3 text-sm text-red-300">{error}</div> : null}
 
         {/* Bot mode selection */}
-        {gameMode === "bots" && players.length === 0 && (
+        {gameMode === "bots" && players.length === 0 && !selectedBotMode && (
           <div className="mt-8">
             <div className="text-base font-semibold mb-4">Izaberi mod igre:</div>
             <div className="grid grid-cols-2 gap-4">
@@ -769,33 +769,10 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                     setError("Unesite ime.");
                     return;
                   }
-                  setJoining(true);
+                  setSelectedBotMode("2v2");
                   setError("");
-                  const s = ensureSocket();
-                  const handleResponse = (res) => {
-                    setJoining(false);
-                    console.log("Bot creation response:", res);
-                    if (res?.ok) {
-                      console.log("Setting playerId:", res.playerId);
-                      setPlayerId(res.playerId);
-                      // State will be updated via socket "state" event
-                    } else {
-                      setError(res?.error || "Greska.");
-                    }
-                  };
-                  
-                  if (!s || !s.connected) {
-                    setError("Cekam konekciju sa serverom...");
-                    s.once("connect", () => {
-                      console.log("Socket connected, emitting room:create-bots");
-                      s.emit("room:create-bots", { roomId, name, botMode: "2v2" }, handleResponse);
-                    });
-                  } else {
-                    console.log("Socket already connected, emitting room:create-bots");
-                    s.emit("room:create-bots", { roomId, name, botMode: "2v2" }, handleResponse);
-                  }
                 }}
-                disabled={joining || !name.trim()}
+                disabled={!name.trim()}
                 className="rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20 p-6 hover:bg-emerald-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
               >
                 <div className="text-xl font-semibold mb-2">2v2</div>
@@ -807,39 +784,81 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                     setError("Unesite ime.");
                     return;
                   }
-                  setJoining(true);
+                  setSelectedBotMode("1v3");
                   setError("");
-                  const s = ensureSocket();
-                  const handleResponse = (res) => {
-                    setJoining(false);
-                    console.log("Bot creation response:", res);
-                    if (res?.ok) {
-                      console.log("Setting playerId:", res.playerId);
-                      setPlayerId(res.playerId);
-                      // State will be updated via socket "state" event
-                    } else {
-                      setError(res?.error || "Greska.");
-                    }
-                  };
-                  
-                  if (!s || !s.connected) {
-                    setError("Cekam konekciju sa serverom...");
-                    s.once("connect", () => {
-                      console.log("Socket connected, emitting room:create-bots");
-                      s.emit("room:create-bots", { roomId, name, botMode: "1v3" }, handleResponse);
-                    });
-                  } else {
-                    console.log("Socket already connected, emitting room:create-bots");
-                    s.emit("room:create-bots", { roomId, name, botMode: "1v3" }, handleResponse);
-                  }
                 }}
-                disabled={joining || !name.trim()}
+                disabled={!name.trim()}
                 className="rounded-xl bg-blue-500/10 ring-1 ring-blue-400/20 p-6 hover:bg-blue-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
               >
                 <div className="text-xl font-semibold mb-2">1v3</div>
                 <div className="text-sm text-white/70 leading-relaxed">Ti sam vs 3 Botovi</div>
               </button>
             </div>
+          </div>
+        )}
+
+        {/* Start bot game button */}
+        {gameMode === "bots" && selectedBotMode && players.length === 0 && (
+          <div className="mt-8">
+            <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-6 mb-4">
+              <div className="text-base font-semibold mb-2">
+                Izabran mod: {selectedBotMode === "2v2" ? "2v2 (Ti + Bot Partner vs 2 Botovi)" : "1v3 (Ti sam vs 3 Botovi)"}
+              </div>
+              <div className="text-sm text-white/70">
+                Klikni "Pokreni igru" da zapocnes igru sa botovima.
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (!name.trim()) {
+                  setError("Unesite ime.");
+                  return;
+                }
+                setJoining(true);
+                setError("");
+                const s = ensureSocket();
+                const handleResponse = (res) => {
+                  setJoining(false);
+                  console.log("Bot creation response:", res);
+                  if (res?.ok) {
+                    console.log("Setting playerId:", res.playerId);
+                    setPlayerId(res.playerId);
+                    // State will be updated via socket "state" event
+                  } else {
+                    setError(res?.error || "Greska.");
+                  }
+                };
+                
+                if (!s || !s.connected) {
+                  setError("Cekam konekciju sa serverom...");
+                  s.once("connect", () => {
+                    console.log("Socket connected, emitting room:create-bots");
+                    s.emit("room:create-bots", { roomId, name, botMode: selectedBotMode }, handleResponse);
+                  });
+                } else {
+                  console.log("Socket already connected, emitting room:create-bots");
+                  s.emit("room:create-bots", { roomId, name, botMode: selectedBotMode }, handleResponse);
+                }
+              }}
+              disabled={joining || !name.trim()}
+              className={[
+                "w-full rounded-xl px-6 py-3 font-semibold transition",
+                "bg-emerald-500 text-black hover:bg-emerald-400 active:bg-emerald-500",
+                "disabled:opacity-60 disabled:cursor-not-allowed"
+              ].join(" ")}
+            >
+              {joining ? "Pokretanje igre..." : "Pokreni igru"}
+            </button>
+            <button
+              onClick={() => {
+                setSelectedBotMode(null);
+                setError("");
+              }}
+              disabled={joining}
+              className="w-full mt-3 rounded-xl px-6 py-2 text-sm text-white/70 hover:text-white/90 transition disabled:opacity-50"
+            >
+              ← Nazad na izbor moda
+            </button>
           </div>
         )}
 
@@ -1992,8 +2011,14 @@ export default function App() {
         setName={setName}
         state={state}
         gameMode={gameMode}
-        onBack={() => setGameMode(null)}
+        onBack={() => {
+          setGameMode(null);
+          setSelectedBotMode(null);
+        }}
         ensureSocket={ensureSocket}
+        selectedBotMode={selectedBotMode}
+        setSelectedBotMode={setSelectedBotMode}
+        setPlayerId={setPlayerId}
       />
     );
   }
