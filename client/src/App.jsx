@@ -8,8 +8,11 @@ import imgCigareta from "./assets/cigareta.png";
 import gameCompletedSound from "./assets/game-completed.wav";
 import gameLostSound from "./assets/game-lost.wav";
 import glassClinkSound from "./assets/glass-clink.wav";
-import cardFlipSound from "./assets/card-flip.mp3";
+import cardDropSound from "./assets/card-drop.mp3";
 import beerOpenSound from "./assets/beer-open.mp3";
+import pivoOpenSound from "./assets/pivo-open.mp3";
+import victoryFanfareSound from "./assets/victory-fanfare.mp3";
+import cardsTakenSound from "./assets/cards-taken.wav";
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -224,7 +227,7 @@ function GameOver({ match, players, socket, playerId, roomId, onLeave, history }
   useEffect(() => {
     if (audioRef.current) {
       // Set appropriate sound based on whether player won or lost
-      audioRef.current.src = isWinner ? gameCompletedSound : gameLostSound;
+      audioRef.current.src = isWinner ? victoryFanfareSound : gameLostSound;
       audioRef.current.volume = 0.5; // Set volume to 50%
       audioRef.current.play().catch((err) => {
         // Ignore errors (e.g., user hasn't interacted with page yet)
@@ -857,6 +860,7 @@ function Game({ state, playerId, socket }) {
   const [propsDrink, setPropsDrink] = useState("spricer");
   const [propsGlass, setPropsGlass] = useState(false);
   const [propsCig, setPropsCig] = useState(false);
+  const previousDrinkRef = useRef(null); // Track previous drink to detect changes
   const [chatText, setChatText] = useState("");
   const [showChat, setShowChat] = useState(false);
   const [bubbles, setBubbles] = useState({}); // playerId -> {text, id}
@@ -994,13 +998,13 @@ function Game({ state, playerId, socket }) {
     const to = { x: Math.round((r() - 0.5) * 34), y: Math.round((r() - 0.5) * 22) };
     setTalonOffset(to);
 
-    // Play card flip sound when card is dropped on table
+    // Play card drop sound when card is dropped on table
     if (a.type === "drop") {
-      const audio = new Audio(cardFlipSound);
+      const audio = new Audio(cardDropSound);
       audio.volume = 0.3; // Set volume to 30%
       audio.play().catch((err) => {
         // Ignore errors (e.g., user hasn't interacted with page yet)
-        console.log("Could not play card flip sound:", err);
+        console.log("Could not play card drop sound:", err);
       });
     }
 
@@ -1015,6 +1019,14 @@ function Game({ state, playerId, socket }) {
 
     // Animate cards flying to captured pile when cards are taken
     if (a.type === "take" || a.type === "jack_take") {
+      // Play sound when cards are taken
+      const audio = new Audio(cardsTakenSound);
+      audio.volume = 0.4; // Set volume to 40%
+      audio.play().catch((err) => {
+        // Ignore errors (e.g., user hasn't interacted with page yet)
+        console.log("Could not play cards taken sound:", err);
+      });
+      
       // Estimate card count based on table count before (we don't have exact count from server)
       // Use the table count from before the action (stored in latestTableCountRef)
       const estimatedCount = Math.min(Math.max(2, latestTableCountRef.current + 1), 8); // +1 for the played card
@@ -1057,9 +1069,12 @@ function Game({ state, playerId, socket }) {
   useEffect(() => {
     const meNow = roomPlayers.find((p) => p.id === playerId);
     if (!meNow) return;
-    setPropsDrink(meNow.drink || "spricer");
+    const currentDrink = meNow.drink || "spricer";
+    setPropsDrink(currentDrink);
     setPropsGlass(Boolean(meNow.glass));
     setPropsCig(Boolean(meNow.cigarette));
+    // Initialize previous drink ref
+    previousDrinkRef.current = currentDrink;
   }, [roomPlayers, playerId]);
 
   // Helper function to check if text is only emoji(s)
@@ -1103,11 +1118,18 @@ function Game({ state, playerId, socket }) {
 
   function saveProps() {
     if (!socket) return;
-    socket.emit("player:props", { drink: propsDrink || null, glass: propsGlass, cigarette: propsCig }, (res) => {
+    const currentDrink = propsDrink || null;
+    const drinkChanged = previousDrinkRef.current !== currentDrink;
+    
+    socket.emit("player:props", { drink: currentDrink, glass: propsGlass, cigarette: propsCig }, (res) => {
       if (!res?.ok) {
         setActionError(res?.error || "Gre?ka.");
         return;
       }
+      
+      // Update previous drink ref
+      previousDrinkRef.current = currentDrink;
+      
       // Trigger glass shake animation and sound if glass was selected
       if (propsGlass) {
         setGlassShakePlayerId(playerId);
@@ -1122,14 +1144,23 @@ function Game({ state, playerId, socket }) {
         });
       }
       
-      // Play beer opening sound if spricer was selected
-      if (propsDrink === "spricer") {
-        const audio = new Audio(beerOpenSound);
-        audio.volume = 0.4; // Set volume to 40%
-        audio.play().catch((err) => {
-          // Ignore errors (e.g., user hasn't interacted with page yet)
-          console.log("Could not play beer open sound:", err);
-        });
+      // Play drink opening sound only if drink changed or is first time
+      if (drinkChanged && currentDrink) {
+        let drinkSound = null;
+        if (currentDrink === "spricer") {
+          drinkSound = beerOpenSound;
+        } else if (currentDrink === "pivo") {
+          drinkSound = pivoOpenSound;
+        }
+        
+        if (drinkSound) {
+          const audio = new Audio(drinkSound);
+          audio.volume = 0.4; // Set volume to 40%
+          audio.play().catch((err) => {
+            // Ignore errors (e.g., user hasn't interacted with page yet)
+            console.log("Could not play drink open sound:", err);
+          });
+        }
       }
       
       setShowProps(false);
