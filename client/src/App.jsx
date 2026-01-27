@@ -713,6 +713,10 @@ function CapturedCardsModal({ open, onClose, title, cards }) {
 }
 
 function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state, gameMode, onBack, ensureSocket, selectedBotMode, setSelectedBotMode, setPlayerId, setJoining, setError }) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:715',message:'Lobby component entry',data:{gameMode,selectedBotMode:selectedBotMode!==undefined?selectedBotMode:'UNDEFINED',hasSetSelectedBotMode:!!setSelectedBotMode,hasSetPlayerId:!!setPlayerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
   const players = state?.players || [];
   const teamA = players.filter((p) => p.team === "A");
   const teamB = players.filter((p) => p.team === "B");
@@ -762,18 +766,23 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
         {error ? <div className="mt-3 text-sm text-red-300">{error}</div> : null}
 
         {/* Bot mode selection */}
-        {gameMode === "bots" && players.length === 0 && !selectedBotMode && (
+        {gameMode === "bots" && players.length === 0 && (selectedBotMode === null || selectedBotMode === undefined) && (
           <div className="mt-8">
             <div className="text-base font-semibold mb-4">Izaberi mod igre:</div>
             <div className="grid grid-cols-2 gap-4">
               <button
                 onClick={() => {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:772',message:'2v2 button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  // #endregion
                   if (!name.trim()) {
                     setError("Unesite ime.");
                     return;
                   }
-                  setSelectedBotMode("2v2");
-                  setError("");
+                  if (setSelectedBotMode) {
+                    setSelectedBotMode("2v2");
+                  }
+                  if (setError) setError("");
                 }}
                 disabled={!name.trim()}
                 className="rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20 p-6 hover:bg-emerald-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
@@ -783,12 +792,17 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
               </button>
               <button
                 onClick={() => {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:787',message:'1v3 button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  // #endregion
                   if (!name.trim()) {
                     setError("Unesite ime.");
                     return;
                   }
-                  setSelectedBotMode("1v3");
-                  setError("");
+                  if (setSelectedBotMode) {
+                    setSelectedBotMode("1v3");
+                  }
+                  if (setError) setError("");
                 }}
                 disabled={!name.trim()}
                 className="rounded-xl bg-blue-500/10 ring-1 ring-blue-400/20 p-6 hover:bg-blue-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
@@ -801,7 +815,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
         )}
 
         {/* Start bot game button */}
-        {gameMode === "bots" && selectedBotMode && players.length === 0 && setSelectedBotMode && setPlayerId && (
+        {gameMode === "bots" && selectedBotMode !== null && selectedBotMode !== undefined && players.length === 0 && setSelectedBotMode && setPlayerId && (
           <div className="mt-8">
             <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-6 mb-4">
               <div className="text-base font-semibold mb-2">
@@ -1921,6 +1935,7 @@ export default function App() {
   const [roomId, setRoomId] = useState("ZINGA");
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState("");
+  const [selectedBotMode, setSelectedBotMode] = useState(null); // "2v2" | "1v3" | null
 
   const [playerId, setPlayerId] = useState("");
   const [state, setState] = useState(null);
@@ -2007,6 +2022,9 @@ export default function App() {
   }
 
   if (!playerId) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2009',message:'Rendering Lobby component',data:{gameMode,selectedBotMode:selectedBotMode!==undefined?selectedBotMode:'UNDEFINED',hasSelectedBotMode:selectedBotMode!==undefined,hasSetSelectedBotMode:!!setSelectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
     return (
       <Lobby
         onJoin={join}
