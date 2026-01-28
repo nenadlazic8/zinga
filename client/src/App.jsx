@@ -449,7 +449,7 @@ function TalonStack({ count, topCard, seed, hideTop, ghostCard }) {
   );
 }
 
-function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
+function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard, players, isLastHand }) {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   
   useEffect(() => {
@@ -460,30 +460,12 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
 
   if (!deckCount) return null;
 
-  const ownerRel = relativePos(mySeat, deckOwnerSeat ?? 0);
-
-  // Pozicija relativno u odnosu na igrača koji poseduje spil:
-  // Tačno kod imena igrača - pozicionirano precizno ispod/imena
-  // Ime igrača: text-sm font-semibold + text-xs za karte + možda "Na potezu" = ~60px visine
-  let pos;
-  if (ownerRel === 1) {
-    // Left: ime je na left-4 top-1/2 -translate-y-1/2 (left: 1rem = 16px, top: 50%)
-    // Deck treba da bude ispod imena, malo desno od centra imena
-    pos = { left: "calc(1rem + 16px)", top: "calc(50% + 40px)", transform: "translate(0, 0)" };
-  } else if (ownerRel === 3) {
-    // Right: ime je na right-4 top-1/2 -translate-y-1/2 (right: 1rem = 16px, top: 50%)
-    // Deck treba da bude ispod imena, malo levo od centra imena
-    pos = { right: "calc(1rem + 16px)", top: "calc(50% + 40px)", transform: "translate(0, 0)" };
-  } else if (ownerRel === 2) {
-    // Top: ime je na top-4 left-1/2 -translate-x-1/2 (top: 1rem = 16px, left: 50%)
-    // Deck treba da bude ispod imena, centrirano
-    pos = { left: "50%", top: "calc(1rem + 60px)", transform: "translate(-50%, 0)" };
-  } else {
-    // Bottom (moj deck): ime je u wooden-shelf na dnu
-    // Deck treba da bude iznad wooden-shelf-a, centrirano
-    // Wooden shelf je na bottom-0, ime je unutar njega, deck treba da bude iznad
-    pos = { left: "50%", bottom: "calc(120px + 8px)", transform: "translate(-50%, 0)" };
-  }
+  // Fiksirano u gornjem levom uglu
+  const pos = { left: "16px", top: "16px", transform: "translate(0, 0)" };
+  
+  // Pronađi igrača koji poseduje deck (secena ide kod njega u poslednjoj ruci)
+  const deckOwner = players?.find((p) => p.seat === deckOwnerSeat);
+  const deckOwnerName = deckOwner?.name || "?";
 
   // Smanjena visina deck-a: manje layera i manji offset
   const layers = clamp(Math.ceil((deckCount || 0) / 20), 1, 4);
@@ -539,23 +521,11 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
           {backLayers}
         </div>
         
-        {/* Prikaz karte - kada je deck kod mene (ownerRel === 0), prikaži celu kartu i tekst */}
-        {ownerRel === 0 && deckPeekCard ? (
+        {/* Tekst "Secena ide kod [ime]" - ispod deck-a, samo u poslednjoj ruci */}
+        {isLastHand && deckPeekCard && deckOwnerName ? (
           <div className="absolute left-1/2 top-full mt-2 pointer-events-auto z-20" style={{ transform: "translate(-50%, 0)" }}>
-            {/* Prikaži celu kartu */}
-            <div className="mb-2 flex justify-center">
-              <Card card={deckPeekCard} compact={false} />
-            </div>
-            {/* Tekstualni prikaz karte */}
-            <div className="text-center">
-              <div className="text-base text-white font-bold whitespace-nowrap bg-black/60 px-3 py-1.5 rounded-lg ring-2 ring-white/30">
-                {deckPeekCard.suit === "hearts" && "♥"}
-                {deckPeekCard.suit === "diamonds" && "♦"}
-                {deckPeekCard.suit === "clubs" && "♣"}
-                {deckPeekCard.suit === "spades" && "♠"}
-                {" "}
-                {deckPeekCard.rank === "A" ? "A" : deckPeekCard.rank === "K" ? "K" : deckPeekCard.rank === "Q" ? "Q" : deckPeekCard.rank === "J" ? "J" : deckPeekCard.rank}
-              </div>
+            <div className="text-xs text-white/90 font-semibold whitespace-nowrap bg-black/60 px-2 py-1 rounded">
+              Secena ide kod {deckOwnerName}
             </div>
           </div>
         ) : null}
@@ -2186,6 +2156,8 @@ function Game({ state, playerId, socket }) {
               deckOwnerSeat={g?.deckOwnerSeat ?? 0}
               deckCount={g?.deckCount ?? 0}
               deckPeekCard={g?.deckPeekCard ?? null}
+              players={roomPlayers}
+              isLastHand={g?.lastDeal?.isLast ?? false}
             />
             <div className="relative z-10 p-4 h-[72vh] min-h-[520px]">
               <div className="absolute left-4 bottom-4 z-30">
