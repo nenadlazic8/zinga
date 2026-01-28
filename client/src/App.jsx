@@ -1048,80 +1048,64 @@ function useAudioManager() {
   const audioInstancesRef = useRef({});
 
   // Enable audio on first user interaction
+  // iOS Safari zahteva da se audio.play() pozove DIREKTNO unutar user gesture handlera (ne async)
   useEffect(() => {
-    const enableAudio = async () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1072',message:'enableAudio called',data:{alreadyEnabled:audioEnabledRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-      
-      if (!audioEnabledRef.current) {
-        audioEnabledRef.current = true;
-        // Pre-create audio instances for better mobile compatibility
-        const sounds = {
-          cardDrop: cardDropSound,
-          cardDeal: cardDealSound,
-          cardsTaken: cardsTakenSound,
-          glassClink: glassClinkSound,
-          beerOpen: beerOpenSound,
-          pivoOpen: pivoOpenSound,
-        };
-        
-        // Create and "unlock" audio instances by playing and immediately pausing
-        // This is required for mobile browsers to allow audio playback
-        const unlockPromises = [];
-        Object.keys(sounds).forEach((key) => {
-          try {
-            const audio = new Audio(sounds[key]);
-            audio.preload = 'auto';
-            audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
-            audioInstancesRef.current[key] = audio;
-            
-            // Unlock audio on mobile by playing and pausing immediately
-            const unlockPromise = audio.play().then(() => {
-              audio.pause();
-              audio.currentTime = 0;
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1091',message:'Audio unlocked',data:{soundKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-              // #endregion
-            }).catch((err) => {
-              // Ignore errors - audio will be unlocked on first real play
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1095',message:'Audio unlock failed',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-              // #endregion
-            });
-            unlockPromises.push(unlockPromise);
-          } catch (err) {
-            console.log(`Failed to preload audio ${key}:`, err);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1100',message:'Audio preload failed',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-            // #endregion
-          }
-        });
-        
-        // Wait for all unlock attempts
-        await Promise.all(unlockPromises);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1105',message:'Audio enabled',data:{unlockedCount:unlockPromises.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
-      }
-    };
-
     // Enable on any user interaction (click or touch)
-    // Use capture phase and multiple events for better mobile support
+    // iOS Safari: audio mora biti kreiran i odigran SINHRONO unutar handlera
     const enableOnInteraction = (e) => {
-      enableAudio();
-      // Also try to unlock audio immediately on this interaction
-      if (e && e.type === 'touchstart') {
-        // For touch events, also try to play a silent sound to unlock audio
+      if (audioEnabledRef.current) return; // Već enabled
+      
+      audioEnabledRef.current = true;
+      
+      // Pre-create audio instances SINHRONO unutar user gesture-a (za iOS Safari)
+      const sounds = {
+        cardDrop: cardDropSound,
+        cardDeal: cardDealSound,
+        cardsTaken: cardsTakenSound,
+        glassClink: glassClinkSound,
+        beerOpen: beerOpenSound,
+        pivoOpen: pivoOpenSound,
+      };
+      
+      // Kreiraj i unlock audio DIREKTNO u handleru (iOS Safari zahteva ovo)
+      Object.keys(sounds).forEach((key) => {
         try {
-          const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
-          silentAudio.volume = 0.01;
-          silentAudio.play().catch(() => {});
-        } catch {}
-      }
+          const audio = new Audio(sounds[key]);
+          audio.preload = 'auto';
+          audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
+          audioInstancesRef.current[key] = audio;
+          
+          // iOS Safari: play() mora biti pozvan direktno u handleru, ne u Promise chain-u
+          // Pokušaj unlock odmah, ali ne čekaj Promise (iOS Safari blokira ako čekaš)
+          const playPromise = audio.play();
+          if (playPromise !== undefined) {
+            playPromise
+              .then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+              })
+              .catch(() => {
+                // Ignore - audio će biti unlocked na prvom pravom play-u
+              });
+          }
+        } catch (err) {
+          console.log(`Failed to preload audio ${key}:`, err);
+        }
+      });
+      
+      // iOS Safari: dodatni unlock pokušaj sa silent audio
+      try {
+        const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+        silentAudio.volume = 0.01;
+        const silentPromise = silentAudio.play();
+        if (silentPromise !== undefined) {
+          silentPromise.catch(() => {});
+        }
+      } catch {}
     };
     
     // Add multiple event listeners for better mobile compatibility
+    // iOS Safari: koristi capture phase za ranije hvatanje gesture-a
     document.addEventListener('click', enableOnInteraction, { once: true, passive: true, capture: true });
     document.addEventListener('touchstart', enableOnInteraction, { once: true, passive: true, capture: true });
     document.addEventListener('touchend', enableOnInteraction, { once: true, passive: true, capture: true });
@@ -1136,10 +1120,6 @@ function useAudioManager() {
   }, []);
 
   const playSound = useCallback((soundKey, volumeOverride = null) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1142',message:'playSound called',data:{soundKey,audioEnabled:audioEnabledRef.current,hasInstance:!!audioInstancesRef.current[soundKey]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-    // #endregion
-    
     // Always try to enable audio if not already enabled
     if (!audioEnabledRef.current) {
       audioEnabledRef.current = true;
@@ -1148,35 +1128,37 @@ function useAudioManager() {
     try {
       const audio = audioInstancesRef.current[soundKey];
       if (audio) {
-        // For mobile: try to play directly first, if that fails, try clone
-        const playAudio = (audioToPlay) => {
-          return audioToPlay.play().then(() => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1156',message:'Sound played successfully',data:{soundKey,method:'direct'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-            // #endregion
-          }).catch((err) => {
-            // If direct play fails, try clone for overlapping sounds
-            const clone = audioToPlay.cloneNode();
-            if (volumeOverride !== null) clone.volume = volumeOverride;
-            return clone.play().then(() => {
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1162',message:'Sound played successfully (clone)',data:{soundKey,method:'clone'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-              // #endregion
-            }).catch((cloneErr) => {
-              console.log(`Could not play ${soundKey} sound:`, cloneErr);
-              // #region agent log
-              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1166',message:'Sound play failed (both methods)',data:{soundKey,error:cloneErr?.message||String(cloneErr)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-              // #endregion
-            });
-          });
-        };
+        // iOS Safari: reset audio pre svakog play-a za pouzdanije reprodukovanje
+        if (audio.currentTime > 0) {
+          audio.currentTime = 0;
+        }
         
         if (volumeOverride !== null) {
           audio.volume = volumeOverride;
         }
-        playAudio(audio);
+        
+        // iOS Safari: pokušaj direktno play, ako ne uspe, probaj clone
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise.catch((err) => {
+            // Ako direktno play ne radi, probaj sa clone (za overlapping sounds)
+            try {
+              const clone = audio.cloneNode();
+              if (volumeOverride !== null) clone.volume = volumeOverride;
+              clone.currentTime = 0;
+              const clonePromise = clone.play();
+              if (clonePromise !== undefined) {
+                clonePromise.catch((cloneErr) => {
+                  console.log(`Could not play ${soundKey} sound (both methods failed):`, cloneErr);
+                });
+              }
+            } catch (cloneErr) {
+              console.log(`Could not clone/play ${soundKey} sound:`, cloneErr);
+            }
+          });
+        }
       } else {
-        // Fallback: create new audio if preload failed
+        // Fallback: create new audio if preload failed (iOS Safari fallback)
         let soundSrc = null;
         switch (soundKey) {
           case 'cardDrop': soundSrc = cardDropSound; break;
@@ -1187,25 +1169,23 @@ function useAudioManager() {
           case 'pivoOpen': soundSrc = pivoOpenSound; break;
         }
         if (soundSrc) {
-          const audio = new Audio(soundSrc);
-          audio.volume = volumeOverride !== null ? volumeOverride : (soundKey === 'cardDrop' ? 0.3 : 0.4);
-          audio.play().then(() => {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1180',message:'Sound played successfully (fallback)',data:{soundKey,method:'new'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-            // #endregion
-          }).catch((err) => {
-            console.log(`Could not play ${soundKey} sound (fallback):`, err);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1184',message:'Sound play failed (fallback)',data:{soundKey,error:err?.message||String(err),method:'new'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-            // #endregion
-          });
+          try {
+            const audio = new Audio(soundSrc);
+            audio.volume = volumeOverride !== null ? volumeOverride : (soundKey === 'cardDrop' ? 0.3 : 0.4);
+            audio.currentTime = 0;
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+              playPromise.catch((err) => {
+                console.log(`Could not play ${soundKey} sound (fallback):`, err);
+              });
+            }
+          } catch (err) {
+            console.log(`Error creating fallback audio for ${soundKey}:`, err);
+          }
         }
       }
     } catch (err) {
       console.log(`Error playing ${soundKey} sound:`, err);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1190',message:'Sound play exception',data:{soundKey,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
     }
   }, []);
 
