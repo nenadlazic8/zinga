@@ -1053,6 +1053,10 @@ function useAudioManager() {
     // Enable on any user interaction (click or touch)
     // iOS Safari: audio mora biti kreiran i odigran SINHRONO unutar handlera
     const enableOnInteraction = (e) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1055',message:'enableOnInteraction called',data:{eventType:e?.type,alreadyEnabled:audioEnabledRef.current,userAgent:navigator.userAgent},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       if (audioEnabledRef.current) return; // Već enabled
       
       audioEnabledRef.current = true;
@@ -1067,13 +1071,25 @@ function useAudioManager() {
         pivoOpen: pivoOpenSound,
       };
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1069',message:'Creating audio instances',data:{soundKeys:Object.keys(sounds),hasCardDrop:!!sounds.cardDrop,hasCardDeal:!!sounds.cardDeal},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+      
       // Kreiraj i unlock audio DIREKTNO u handleru (iOS Safari zahteva ovo)
       Object.keys(sounds).forEach((key) => {
         try {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1073',message:'Creating audio element',data:{soundKey:key,hasSource:!!sounds[key]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
+          
           const audio = new Audio(sounds[key]);
           audio.preload = 'auto';
           audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
           audioInstancesRef.current[key] = audio;
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1078',message:'Audio element created',data:{soundKey:key,readyState:audio.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
           
           // iOS Safari: play() mora biti pozvan direktno u handleru, ne u Promise chain-u
           // Pokušaj unlock odmah, ali ne čekaj Promise (iOS Safari blokira ako čekaš)
@@ -1081,14 +1097,27 @@ function useAudioManager() {
           if (playPromise !== undefined) {
             playPromise
               .then(() => {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1083',message:'Audio unlock success',data:{soundKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                // #endregion
                 audio.pause();
                 audio.currentTime = 0;
               })
-              .catch(() => {
+              .catch((err) => {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1087',message:'Audio unlock failed',data:{soundKey:key,error:err?.message||String(err),name:err?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                // #endregion
                 // Ignore - audio će biti unlocked na prvom pravom play-u
               });
+          } else {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1090',message:'Audio play returned undefined',data:{soundKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
           }
         } catch (err) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1092',message:'Failed to create audio element',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
           console.log(`Failed to preload audio ${key}:`, err);
         }
       });
@@ -1099,9 +1128,21 @@ function useAudioManager() {
         silentAudio.volume = 0.01;
         const silentPromise = silentAudio.play();
         if (silentPromise !== undefined) {
-          silentPromise.catch(() => {});
+          silentPromise.catch((err) => {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1102',message:'Silent audio unlock failed',data:{error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+            // #endregion
+          });
         }
-      } catch {}
+      } catch (err) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1104',message:'Silent audio creation failed',data:{error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+      }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1105',message:'enableOnInteraction completed',data:{instancesCreated:Object.keys(audioInstancesRef.current).length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
     };
     
     // Add multiple event listeners for better mobile compatibility
@@ -1120,6 +1161,10 @@ function useAudioManager() {
   }, []);
 
   const playSound = useCallback((soundKey, volumeOverride = null) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1122',message:'playSound called',data:{soundKey,audioEnabled:audioEnabledRef.current,hasInstance:!!audioInstancesRef.current[soundKey],allInstances:Object.keys(audioInstancesRef.current)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+    
     // Always try to enable audio if not already enabled
     if (!audioEnabledRef.current) {
       audioEnabledRef.current = true;
@@ -1128,6 +1173,10 @@ function useAudioManager() {
     try {
       const audio = audioInstancesRef.current[soundKey];
       if (audio) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1130',message:'Audio instance found, attempting play',data:{soundKey,currentTime:audio.currentTime,readyState:audio.readyState,volume:audio.volume},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+        
         // iOS Safari: reset audio pre svakog play-a za pouzdanije reprodukovanje
         if (audio.currentTime > 0) {
           audio.currentTime = 0;
@@ -1140,24 +1189,52 @@ function useAudioManager() {
         // iOS Safari: pokušaj direktno play, ako ne uspe, probaj clone
         const playPromise = audio.play();
         if (playPromise !== undefined) {
-          playPromise.catch((err) => {
-            // Ako direktno play ne radi, probaj sa clone (za overlapping sounds)
-            try {
-              const clone = audio.cloneNode();
-              if (volumeOverride !== null) clone.volume = volumeOverride;
-              clone.currentTime = 0;
-              const clonePromise = clone.play();
-              if (clonePromise !== undefined) {
-                clonePromise.catch((cloneErr) => {
-                  console.log(`Could not play ${soundKey} sound (both methods failed):`, cloneErr);
-                });
+          playPromise
+            .then(() => {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1143',message:'Audio play success',data:{soundKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+              // #endregion
+            })
+            .catch((err) => {
+              // #region agent log
+              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1146',message:'Audio play failed, trying clone',data:{soundKey,error:err?.message||String(err),name:err?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+              // #endregion
+              // Ako direktno play ne radi, probaj sa clone (za overlapping sounds)
+              try {
+                const clone = audio.cloneNode();
+                if (volumeOverride !== null) clone.volume = volumeOverride;
+                clone.currentTime = 0;
+                const clonePromise = clone.play();
+                if (clonePromise !== undefined) {
+                  clonePromise
+                    .then(() => {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1153',message:'Clone audio play success',data:{soundKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                      // #endregion
+                    })
+                    .catch((cloneErr) => {
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1156',message:'Both audio play methods failed',data:{soundKey,error:cloneErr?.message||String(cloneErr)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                      // #endregion
+                      console.log(`Could not play ${soundKey} sound (both methods failed):`, cloneErr);
+                    });
+                }
+              } catch (cloneErr) {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1161',message:'Clone creation failed',data:{soundKey,error:cloneErr?.message||String(cloneErr)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                // #endregion
+                console.log(`Could not clone/play ${soundKey} sound:`, cloneErr);
               }
-            } catch (cloneErr) {
-              console.log(`Could not clone/play ${soundKey} sound:`, cloneErr);
-            }
-          });
+            });
+        } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1165',message:'Audio play returned undefined',data:{soundKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
         }
       } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1167',message:'Audio instance not found, using fallback',data:{soundKey,allInstances:Object.keys(audioInstancesRef.current)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         // Fallback: create new audio if preload failed (iOS Safari fallback)
         let soundSrc = null;
         switch (soundKey) {
@@ -1168,6 +1245,9 @@ function useAudioManager() {
           case 'beerOpen': soundSrc = beerOpenSound; break;
           case 'pivoOpen': soundSrc = pivoOpenSound; break;
         }
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1173',message:'Fallback audio creation',data:{soundKey,hasSoundSrc:!!soundSrc},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         if (soundSrc) {
           try {
             const audio = new Audio(soundSrc);
@@ -1175,16 +1255,31 @@ function useAudioManager() {
             audio.currentTime = 0;
             const playPromise = audio.play();
             if (playPromise !== undefined) {
-              playPromise.catch((err) => {
-                console.log(`Could not play ${soundKey} sound (fallback):`, err);
-              });
+              playPromise
+                .then(() => {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1181',message:'Fallback audio play success',data:{soundKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  // #endregion
+                })
+                .catch((err) => {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1184',message:'Fallback audio play failed',data:{soundKey,error:err?.message||String(err),name:err?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  // #endregion
+                  console.log(`Could not play ${soundKey} sound (fallback):`, err);
+                });
             }
           } catch (err) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1189',message:'Fallback audio creation exception',data:{soundKey,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+            // #endregion
             console.log(`Error creating fallback audio for ${soundKey}:`, err);
           }
         }
       }
     } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1194',message:'playSound exception',data:{soundKey,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       console.log(`Error playing ${soundKey} sound:`, err);
     }
   }, []);
