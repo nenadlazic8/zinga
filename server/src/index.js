@@ -450,18 +450,46 @@ function applyPlay(room, playerId, cardId) {
   // Deal next round if needed
   if (allHandsEmpty(room)) {
     if (g.deck.length > 0) {
+      // Kraj runde, ali ima još karata u špilu:
+      // 1) prikaži animaciju poslednje karte / nošenja
+      // 2) tek posle male pauze podeli novu ruku
       const before = g.deck.length;
-      g.round += 1;
-      dealFourEach(room);
-      g.log.push("Deljenje: po 4 karte.");
-      // Deal event for UI animations (and last deal marker)
-      const isLast = before > 0 && g.deck.length === 0;
-      g.lastDeal = { id: nextActionId(room), isLast, round: g.round, hand: room.match?.hand ?? null };
-      
-      // After dealing, check if next player is a bot
+      const currentRound = g.round;
+      const dealDelayMs = 1800; // da se jasno vidi ko nosi poslednje karte
+
       setTimeout(() => {
-        triggerBotPlay(room);
-      }, 3000); // Wait for deal animation (slower bot response after deal)
+        const liveRoom = rooms.get(room.id);
+        if (!liveRoom) return;
+        if (liveRoom.phase !== "playing") return;
+
+        const liveGame = liveRoom.game;
+        if (!liveGame) return;
+
+        // Ako se iz nekog razloga stanje promenilo, nemoj duplo deliti
+        if (!allHandsEmpty(liveRoom)) return;
+        if (liveGame.deck.length !== before) return;
+
+        liveGame.round = currentRound + 1;
+        dealFourEach(liveRoom);
+        liveGame.log.push("Deljenje: po 4 karte.");
+
+        // Deal event za UI animaciju i oznaku poslednjeg deljenja
+        const isLast = before > 0 && liveGame.deck.length === 0;
+        liveGame.lastDeal = {
+          id: nextActionId(liveRoom),
+          isLast,
+          round: liveGame.round,
+          hand: liveRoom.match?.hand ?? null
+        };
+
+        // Pošalji novu ruku svim igračima
+        broadcastRoom(liveRoom);
+
+        // Posle animacije deljenja pusti bota
+        setTimeout(() => {
+          triggerBotPlay(liveRoom);
+        }, 3000);
+      }, dealDelayMs);
     } else {
       g.lastAction.isLastCardOfHand = true; // UI: duža animacija, karta u spil
       endGame(room);

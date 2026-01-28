@@ -765,15 +765,15 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
 
         {error ? <div className="mt-3 text-sm text-red-300">{error}</div> : null}
 
-        {/* Bot mode selection */}
+        {/* Bot mode selection - uvek 2v2, partner preko puta */}
         {gameMode === "bots" && players.length === 0 && (selectedBotMode === null || selectedBotMode === undefined) && (
           <div className="mt-8">
             <div className="text-base font-semibold mb-4">Izaberi mod igre:</div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <button
                 onClick={() => {
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:772',message:'2v2 button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:772',message:'2v2 (partner across) button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                   // #endregion
                   if (!name.trim()) {
                     setError("Unesite ime.");
@@ -786,26 +786,6 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                 }}
                 disabled={!name.trim()}
                 className="rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20 p-6 hover:bg-emerald-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
-              >
-                <div className="text-xl font-semibold mb-2">2v2</div>
-                <div className="text-sm text-white/70 leading-relaxed">Ti + Bot Partner (pored) vs 2 Botovi</div>
-              </button>
-              <button
-                onClick={() => {
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:794',message:'2v2 (partner across) button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                  // #endregion
-                  if (!name.trim()) {
-                    setError("Unesite ime.");
-                    return;
-                  }
-                  if (setSelectedBotMode) {
-                    setSelectedBotMode("2v2");
-                  }
-                  if (setError) setError("");
-                }}
-                disabled={!name.trim()}
-                className="rounded-xl bg-blue-500/10 ring-1 ring-blue-400/20 p-6 hover:bg-blue-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
               >
                 <div className="text-xl font-semibold mb-2">2v2</div>
                 <div className="text-sm text-white/70 leading-relaxed">Ti + Bot Partner (preko puta) vs 2 Botovi</div>
