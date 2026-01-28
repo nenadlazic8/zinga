@@ -807,28 +807,85 @@ io.on("connection", (socket) => {
   // Handle team selection
   socket.on("room:select-team", ({ team }, ack) => {
     try {
+      // #region agent log
+      const logData = {location:'index.js:808',message:'room:select-team received',data:{roomId:socket.data.roomId,playerId:socket.data.playerId,team,hasAck:typeof ack==='function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+      // #endregion
+      
       const roomId = socket.data.roomId;
       const playerId = socket.data.playerId;
-      if (!roomId || !playerId) throw new Error("Niste u sobi.");
+      if (!roomId || !playerId) {
+        // #region agent log
+        const logData = {location:'index.js:813',message:'room:select-team validation failed - not in room',data:{roomId,playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+        try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+        // #endregion
+        throw new Error("Niste u sobi.");
+      }
       const room = rooms.get(roomId);
-      if (!room) throw new Error("Soba nije pronađena.");
-      if (room.phase !== "lobby") throw new Error("Igra je već počela.");
+      if (!room) {
+        // #region agent log
+        const logData = {location:'index.js:819',message:'room:select-team validation failed - room not found',data:{roomId,availableRooms:Array.from(rooms.keys())},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+        try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+        // #endregion
+        throw new Error("Soba nije pronađena.");
+      }
+      if (room.phase !== "lobby") {
+        // #region agent log
+        const logData = {location:'index.js:825',message:'room:select-team validation failed - wrong phase',data:{roomId,phase:room.phase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+        try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+        // #endregion
+        throw new Error("Igra je već počela.");
+      }
       
       const p = findPlayer(room, playerId);
-      if (!p) throw new Error("Igrač nije pronađen.");
-      if (p.team) throw new Error("Već ste izabrali tim.");
+      if (!p) {
+        // #region agent log
+        const logData = {location:'index.js:832',message:'room:select-team validation failed - player not found',data:{roomId,playerId,playersInRoom:room.players.map(pl=>({id:pl.id,name:pl.name}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+        try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+        // #endregion
+        throw new Error("Igrač nije pronađen.");
+      }
+      if (p.team) {
+        // #region agent log
+        const logData = {location:'index.js:838',message:'room:select-team validation failed - already has team',data:{roomId,playerId,currentTeam:p.team},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+        try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+        // #endregion
+        throw new Error("Već ste izabrali tim.");
+      }
       
-      if (team !== "A" && team !== "B") throw new Error("Nevažeći tim.");
+      if (team !== "A" && team !== "B") {
+        // #region agent log
+        const logData = {location:'index.js:845',message:'room:select-team validation failed - invalid team',data:{roomId,playerId,team},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+        try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+        // #endregion
+        throw new Error("Nevažeći tim.");
+      }
       
       // Check if team is full
       const teamCount = room.players.filter((pl) => pl.team === team).length;
-      if (teamCount >= 2) throw new Error(`Tim ${team} je pun.`);
+      if (teamCount >= 2) {
+        // #region agent log
+        const logData = {location:'index.js:853',message:'room:select-team validation failed - team full',data:{roomId,playerId,team,teamCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+        try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+        // #endregion
+        throw new Error(`Tim ${team} je pun.`);
+      }
+      
+      // #region agent log
+      const logDataBefore = {location:'index.js:860',message:'room:select-team assigning team',data:{roomId,playerId,team,playerName:p.name,teamCountBefore:teamCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logDataBefore) + '\n'); } catch {}
+      // #endregion
       
       p.team = team;
       
       // Check if we can start game (4 players, 2 per team)
       const teamA = room.players.filter((pl) => pl.team === "A");
       const teamB = room.players.filter((pl) => pl.team === "B");
+      
+      // #region agent log
+      const logDataAfter = {location:'index.js:870',message:'room:select-team after assignment',data:{roomId,playerId,team,playersCount:room.players.length,teamACount:teamA.length,teamBCount:teamB.length,canStart:room.players.length === 4 && teamA.length === 2 && teamB.length === 2},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logDataAfter) + '\n'); } catch {}
+      // #endregion
       
       if (room.players.length === 4 && teamA.length === 2 && teamB.length === 2) {
         // Assign seats based on teams (A: seats 0,2; B: seats 1,3)
@@ -844,6 +901,11 @@ io.on("connection", (socket) => {
           }
         }
         
+        // #region agent log
+        const logDataStart = {location:'index.js:887',message:'room:select-team starting game',data:{roomId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+        try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logDataStart) + '\n'); } catch {}
+        // #endregion
+        
         startGame(room);
         broadcastRoom(room);
         setTimeout(() => broadcastRoom(room), 100);
@@ -851,8 +913,17 @@ io.on("connection", (socket) => {
         broadcastRoom(room);
       }
       
+      // #region agent log
+      const logDataSuccess = {location:'index.js:896',message:'room:select-team success',data:{roomId,playerId,team},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logDataSuccess) + '\n'); } catch {}
+      // #endregion
+      
       ack?.({ ok: true });
     } catch (e) {
+      // #region agent log
+      const logDataError = {location:'index.js:901',message:'room:select-team error',data:{error:e?.message||String(e),roomId:socket.data.roomId,playerId:socket.data.playerId,team},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logDataError) + '\n'); } catch {}
+      // #endregion
       ack?.({ ok: false, error: e?.message || "Greška." });
     }
   });

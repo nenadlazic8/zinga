@@ -503,13 +503,14 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard, players, is
       }}
     >
       <div className={`relative ${deckSize}`}>
-        {/* Peek card (last card of deck) - preko spila, samo malo se vidi spil */}
+        {/* Peek card (last card of deck) - preko spila, bukvalno preko njega */}
         {deckPeekCard ? (
           <div
             className="absolute left-1/2 bottom-full"
             style={{
               transform: "translate(-50%, 0)",
-              zIndex: 15
+              zIndex: 15,
+              marginBottom: "-2px" // Minimalni offset da bude direktno preko spila
             }}
           >
             <Card card={deckPeekCard} compact={true} />
@@ -517,7 +518,7 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard, players, is
         ) : null}
         
         {/* Deck layers - malo se vidi ispod karte */}
-        <div className="relative" style={{ zIndex: 5, marginTop: deckPeekCard ? "-8px" : "0" }}>
+        <div className="relative" style={{ zIndex: 5, marginTop: deckPeekCard ? "-2px" : "0" }}>
           {backLayers}
         </div>
         
@@ -1007,6 +1008,13 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
 }
 
 function WaitingRoom({ state, playerId, socket }) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1009',message:'WaitingRoom component entry',data:{hasState:!!state,hasPlayerId:!!playerId,hasSocket:!!socket,phase:state?.phase,playersCount:state?.players?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
+  // iOS Safari: unlock audio - get from hook
+  const { unlockAudioDirectly } = useAudioManager();
+  
   const players = state?.players || [];
   const me = players.find((p) => p.id === playerId);
   const teamA = players.filter((p) => p.team === "A");
@@ -1015,36 +1023,62 @@ function WaitingRoom({ state, playerId, socket }) {
   const missing = Math.max(0, 4 - players.length);
   const canStart = players.length === 4 && teamA.length === 2 && teamB.length === 2;
 
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1017',message:'WaitingRoom state computed',data:{playersCount:players.length,hasMe:!!me,myTeam:me?.team,teamACount:teamA.length,teamBCount:teamB.length,canStart,hasUnlockAudio:typeof unlockAudioDirectly==='function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+
   function selectTeam(team) {
     // #region agent log
     console.log('[WAITING_ROOM] selectTeam called', { team, hasSocket: !!socket, hasMe: !!me, myTeam: me?.team });
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:963',message:'selectTeam called',data:{team,hasSocket:!!socket,hasMe:!!me,myTeam:me?.team},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1020',message:'selectTeam called',data:{team,hasSocket:!!socket,hasMe:!!me,myTeam:me?.team,hasUnlockAudio:typeof unlockAudioDirectly==='function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
     
     if (!socket || !me || me.team) {
       // #region agent log
       console.log('[WAITING_ROOM] selectTeam blocked', { hasSocket: !!socket, hasMe: !!me, myTeam: me?.team });
-      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:965',message:'selectTeam blocked',data:{hasSocket:!!socket,hasMe:!!me,myTeam:me?.team},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1025',message:'selectTeam blocked',data:{hasSocket:!!socket,hasMe:!!me,myTeam:me?.team},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       return; // Already has team
     }
     
     // iOS Safari: unlock audio direktno na button click
-    unlockAudioDirectly();
+    try {
+      if (typeof unlockAudioDirectly === 'function') {
+        unlockAudioDirectly();
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1033',message:'unlockAudioDirectly called successfully',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+      } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1036',message:'unlockAudioDirectly not available',data:{type:typeof unlockAudioDirectly},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+      }
+    } catch (err) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1040',message:'unlockAudioDirectly error',data:{error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+    }
     
     // #region agent log
     console.log('[WAITING_ROOM] Emitting room:select-team', { team, socketConnected: socket.connected });
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:967',message:'Emitting room:select-team',data:{team,socketConnected:socket.connected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1045',message:'Emitting room:select-team',data:{team,socketConnected:socket.connected,socketId:socket?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
     
     socket.emit("room:select-team", { team }, (res) => {
       // #region agent log
       console.log('[WAITING_ROOM] room:select-team response', res);
-      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:968',message:'room:select-team response',data:{ok:res?.ok,error:res?.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1049',message:'room:select-team response',data:{ok:res?.ok,error:res?.error,hasResponse:!!res},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       
       if (!res?.ok) {
         console.error("Failed to select team:", res?.error);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1053',message:'Team selection failed',data:{error:res?.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+      } else {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1056',message:'Team selection succeeded',data:{team},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
       }
     });
   }
