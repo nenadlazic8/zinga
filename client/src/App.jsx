@@ -3,8 +3,10 @@ import { createSocket } from "./socket.js";
 import Card from "./components/Card.jsx";
 import imgSpricer from "./assets/spricer.png";
 import imgPivo from "./assets/pivo.png";
+import imgVinjak from "./assets/vinjak.png";
 import imgCasa from "./assets/casa.png";
 import imgCigareta from "./assets/cigareta.png";
+import imgSobranje from "./assets/sobranje.png";
 import imgWoodenBackground from "./assets/wooden-background.png";
 import imgWoodenDesk from "./assets/wooden-desk.png";
 import gameCompletedSound from "./assets/game-completed.wav";
@@ -422,7 +424,7 @@ function TalonStack({ count, topCard, seed, hideTop, ghostCard }) {
   }
 
   return (
-    <div className="relative w-[240px] h-[220px] sm:w-[220px] sm:h-[200px] md:w-[280px] md:h-[260px]">
+    <div className="relative w-[280px] h-[260px] sm:w-[300px] sm:h-[280px] md:w-[280px] md:h-[260px]">
       {layers}
       {/* Ghost card - faded outline of last taken card */}
       {ghostCard && !hideTop && (
@@ -485,7 +487,8 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
     top: `${b.y + cv.y * 10 + rv.y * 10}%`
   };
 
-  const layers = clamp(Math.ceil((deckCount || 0) / 12), 1, 6);
+  // Smanjena visina deck-a: manje layera i manji offset
+  const layers = clamp(Math.ceil((deckCount || 0) / 20), 1, 4);
   const backLayers = [];
   for (let i = 0; i < layers; i++) {
     backLayers.push(
@@ -495,7 +498,7 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
         style={{
           left: 0,
           top: 0,
-          transform: `translate(${i * 3}px, ${-i * 2}px) rotate(${i * 2 - 3}deg)`,
+          transform: `translate(${i * 2}px, ${-i * 1.5}px) rotate(${i * 1.5 - 2}deg)`,
           zIndex: i
         }}
       >
@@ -512,25 +515,21 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
       <div className={`relative ${deckSize}`}>
         {backLayers}
 
-        {/* Peek card (last card of deck) */}
+        {/* Peek card (last card of deck) - ispod spila i viri */}
         {deckPeekCard ? (
           <div
-            className="absolute left-1/2 bottom-full"
+            className="absolute left-1/2 top-full"
             style={{
-              transform: "translate(-40%, 18px) rotate(6deg)",
+              transform: "translate(-50%, -12px) rotate(6deg)",
               zIndex: 10
             }}
           >
-            {/* Clip so it looks like it is peeking out */}
-            <div className={`overflow-hidden ${isMobile ? "h-[56px]" : "h-[96px]"}`}>
+            {/* Clip so it looks like it is peeking out from bottom - samo gornji deo karte se vidi */}
+            <div className={`overflow-hidden ${isMobile ? "h-[42px]" : "h-[72px]"}`} style={{ clipPath: "inset(0 0 50% 0)" }}>
               <Card card={deckPeekCard} compact={isMobile} />
             </div>
           </div>
         ) : null}
-
-        <div className="absolute -right-2 -bottom-2 rounded-full bg-white/90 text-black text-[10px] font-semibold px-2 py-0.5 ring-1 ring-black/20">
-          {deckCount}
-        </div>
       </div>
     </div>
   );
@@ -583,14 +582,14 @@ function PlayerPropsLayer({ mySeat, players, glassShakePlayerId }) {
 
     const drink = p.drink || null;
     const hasGlass = Boolean(p.glass);
-    const hasCig = Boolean(p.cigarette);
+    const hasCig = p.cigarette && p.cigarette !== null;
     const shouldShakeGlass = glassShakePlayerId === p.id && hasGlass;
 
     const drinkPos = drink ? { x: b.x + rv.x * 15 + dx, y: b.y + rv.y * 15 + dy } : null;
 
     if (drink) {
-      const drinkImg = drink === "spricer" ? imgSpricer : imgPivo;
-      const w = drink === "spricer" ? 110 : 106;
+      const drinkImg = drink === "spricer" ? imgSpricer : drink === "vinjak" ? imgVinjak : imgPivo;
+      const w = drink === "spricer" ? 110 : drink === "vinjak" ? 100 : 106;
       items.push(
         <img
           key={`drink-${p.id}`}
@@ -631,22 +630,25 @@ function PlayerPropsLayer({ mySeat, players, glassShakePlayerId }) {
 
     if (hasCig) {
       // Cigarette: next to drink, aligned, always on player's LEFT side (relative to seat)
-      const base = drinkPos || { x: b.x + rv.x * 15 + dx, y: b.y + rv.y * 15 + dy };
-      const leftOfDrink = { x: base.x - rv.x * 7, y: base.y - rv.y * 7 };
-      items.push(
-        <img
-          key={`cig-${p.id}`}
-          src={imgCigareta}
-          alt=""
-          className="absolute pointer-events-none opacity-90 drop-shadow-[0_22px_28px_rgba(0,0,0,0.65)]"
-          style={{
-            left: `${leftOfDrink.x}%`,
-            top: `${leftOfDrink.y}%`,
-            width: 90,
-            transform: `translate(-50%, -50%) rotate(${crot}deg)`
-          }}
-        />
-      );
+      if (hasCig && p.cigarette) {
+        const base = drinkPos || { x: b.x + rv.x * 15 + dx, y: b.y + rv.y * 15 + dy };
+        const leftOfDrink = { x: base.x - rv.x * 7, y: base.y - rv.y * 7 };
+        const cigImg = p.cigarette === "sobranje" ? imgSobranje : imgCigareta;
+        items.push(
+          <img
+            key={`cig-${p.id}`}
+            src={cigImg}
+            alt=""
+            className="absolute pointer-events-none opacity-90 drop-shadow-[0_22px_28px_rgba(0,0,0,0.65)]"
+            style={{
+              left: `${leftOfDrink.x}%`,
+              top: `${leftOfDrink.y}%`,
+              width: 90,
+              transform: `translate(-50%, -50%) rotate(${crot}deg)`
+            }}
+          />
+        );
+      }
     }
   }
 
@@ -786,7 +788,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
 
         {error ? <div className="mt-3 text-sm text-red-300">{error}</div> : null}
 
-        {/* Bot mode selection - uvek 2v2, partner preko puta */}
+        {/* Bot mode selection - uvek 2v2, socer preko puta */}
         {gameMode === "bots" && players.length === 0 && (selectedBotMode === null || selectedBotMode === undefined) && (
           <div className="mt-8">
             <div className="text-base font-semibold mb-4">Izaberi mod igre:</div>
@@ -801,7 +803,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                     
                     // #region agent log
                     console.log('[LOBBY] 2v2 button clicked', { hasSetSelectedBotMode: !!setSelectedBotMode, name: name.trim() });
-                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:772',message:'2v2 (partner across) button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:772',message:'2v2 (socer across) button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                     // #endregion
                     
                     if (!name.trim()) {
@@ -849,7 +851,7 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
           <div className="mt-8">
             <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-6 mb-4">
               <div className="text-base font-semibold mb-2">
-                Izabran mod: {selectedBotMode === "2v2" ? "2v2 (Ti + Bot Partner vs 2 Botovi)" : "2v2 (Ti + Bot Partner vs 2 Botovi)"}
+                Izabran mod: {selectedBotMode === "2v2" ? "2v2 (Ti + Bot Socer vs 2 Botovi)" : "2v2 (Ti + Bot Socer vs 2 Botovi)"}
               </div>
               <div className="text-sm text-white/70">
                 Klikni "Pokreni igru" da zapocnes igru sa botovima.
@@ -1482,7 +1484,7 @@ function Game({ state, playerId, socket }) {
   const [showProps, setShowProps] = useState(false);
   const [propsDrink, setPropsDrink] = useState("spricer");
   const [propsGlass, setPropsGlass] = useState(false);
-  const [propsCig, setPropsCig] = useState(false);
+  const [propsCig, setPropsCig] = useState(null); // null | "cigareta" | "sobranje"
   const previousDrinkRef = useRef(null); // Track previous drink to detect changes
   const [chatText, setChatText] = useState("");
   const [showChat, setShowChat] = useState(false);
@@ -1705,7 +1707,7 @@ function Game({ state, playerId, socket }) {
     const currentDrink = meNow.drink || "spricer";
     setPropsDrink(currentDrink);
     setPropsGlass(Boolean(meNow.glass));
-    setPropsCig(Boolean(meNow.cigarette));
+    setPropsCig(meNow.cigarette || null); // Can be null, "cigareta", or "sobranje"
     // Initialize previous drink ref
     previousDrinkRef.current = currentDrink;
   }, [roomPlayers, playerId]);
@@ -1781,10 +1783,12 @@ function Game({ state, playerId, socket }) {
           drinkSound = beerOpenSound;
         } else if (currentDrink === "pivo") {
           drinkSound = pivoOpenSound;
+        } else if (currentDrink === "vinjak") {
+          drinkSound = beerOpenSound; // Use beer sound for vinjak
         }
         
         if (drinkSound) {
-          const soundKey = currentDrink === "spricer" ? 'beerOpen' : 'pivoOpen';
+          const soundKey = currentDrink === "spricer" ? 'beerOpen' : currentDrink === "vinjak" ? 'beerOpen' : 'pivoOpen';
           playSound(soundKey);
         }
       }
@@ -1842,10 +1846,11 @@ function Game({ state, playerId, socket }) {
               </button>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-4 grid grid-cols-3 gap-2">
               {[
-                { id: "spricer", label: "?pricer", img: imgSpricer },
-                { id: "pivo", label: "Pivo", img: imgPivo }
+                { id: "spricer", label: "Spricer", img: imgSpricer },
+                { id: "pivo", label: "Pivo", img: imgPivo },
+                { id: "vinjak", label: "Vinjak", img: imgVinjak }
               ].map((opt) => (
                 <button
                   key={opt.id}
@@ -2070,7 +2075,7 @@ function Game({ state, playerId, socket }) {
                   onDone={clearFlyingToPile}
                 />
               ) : null}
-              {/* Top (partner) */}
+              {/* Top (socer) */}
               <div className="absolute top-4 left-1/2 -translate-x-1/2 text-center">
                 {byRel[2]?.id && bubbles[byRel[2].id]?.text ? (
                   <div className={`mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-white/90 animate-chat-fade-out ${
@@ -2340,7 +2345,7 @@ function GameModeSelection({ onSelect }) {
             <div className="text-3xl mb-3">🤖</div>
             <div className="text-2xl font-semibold mb-3">Igraj protiv botova</div>
             <div className="text-white/70 text-sm mb-6 leading-relaxed">
-              Igraj protiv AI botova. Izaberi da igras sa partnerom botom ili sam protiv 3 botova.
+              Igraj protiv AI botova. Izaberi da igras sa socerom botom ili sam protiv 3 botova.
             </div>
             <div className="text-emerald-400 text-sm font-semibold group-hover:underline flex items-center gap-2">
               Igraj protiv botova <span className="text-lg">→</span>

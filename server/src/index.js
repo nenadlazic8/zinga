@@ -125,7 +125,7 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
     hands,
     turnSeat: startSeat,
     dealSeat: startSeat,
-    deckOwnerSeat: (startSeat - 2 + 4) % 4, // Two seats behind first player in counter-clockwise order (will get last card)
+    deckOwnerSeat: (startSeat - 1 + 4) % 4, // One seat behind first player in counter-clockwise order (last player to play)
     lastTakerPlayerId: null,
     lastAction: null,
     lastDeal: { id: 0, isLast: false, round: 1, hand: room.match?.hand ?? null },
@@ -757,7 +757,7 @@ io.on("connection", (socket) => {
         connected: true,
         team: null, // Player will select team
         isBot: false,
-        drink: null, // "spricer" | "pivo" | null
+        drink: null, // "spricer" | "pivo" | "vinjak" | null
         glass: false,
         cigarette: false
       });
@@ -864,13 +864,13 @@ io.on("connection", (socket) => {
       if (botMode === "2v2") {
         // Human + 1 bot vs 2 bots
         // Human selects team first, then bots fill remaining spots
-        // For now, assign human to Team A, partner bot to Team A, 2 bots to Team B
+        // For now, assign human to Team A, socer bot to Team A, 2 bots to Team B
         humanPlayer.team = "A";
         humanPlayer.seat = 0;
         
         const partnerBot = {
           id: randomUUID(),
-          name: "Bot Partner",
+          name: "Bot Socer",
           seat: 2,
           socketId: null,
           connected: true,
@@ -910,16 +910,16 @@ io.on("connection", (socket) => {
         };
         room.players.push(bot2);
       } else {
-        // 1v3 mode changed to 2v2: Human + bot partner (across from human) vs 2 bots
-        // Human is at seat 0 (Team A), partner bot is at seat 2 (Team A, across from human)
+        // 1v3 mode changed to 2v2: Human + bot socer (across from human) vs 2 bots
+        // Human is at seat 0 (Team A), socer bot is at seat 2 (Team A, across from human)
         // 2 bots are at seats 1 and 3 (Team B)
         humanPlayer.team = "A";
         humanPlayer.seat = 0;
         
-        // Partner bot (across from human, seat 2, Team A)
+        // Socer bot (across from human, seat 2, Team A)
         const partnerBot = {
           id: randomUUID(),
-          name: "Bot Partner",
+          name: "Bot Socer",
           seat: 2,
           socketId: null,
           connected: true,
@@ -987,12 +987,16 @@ io.on("connection", (socket) => {
       if (!p) throw new Error("Igrač nije pronađen.");
 
       const d = drink === null || drink === undefined ? null : String(drink);
-      const allowed = new Set(["spricer", "pivo", null]);
-      if (!allowed.has(d)) throw new Error("Nepoznata opcija pića.");
+      const allowedDrinks = new Set(["spricer", "pivo", "vinjak", null]);
+      if (!allowedDrinks.has(d)) throw new Error("Nepoznata opcija pića.");
+
+      const cig = cigarette === null || cigarette === undefined ? null : String(cigarette);
+      const allowedCigarettes = new Set(["cigareta", "sobranje", null]);
+      if (!allowedCigarettes.has(cig)) throw new Error("Nepoznata opcija cigareta.");
 
       p.drink = d;
       p.glass = Boolean(glass);
-      p.cigarette = Boolean(cigarette);
+      p.cigarette = cig;
 
       broadcastRoom(room);
       ack?.({ ok: true });
