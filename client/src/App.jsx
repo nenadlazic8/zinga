@@ -5,6 +5,8 @@ import imgSpricer from "./assets/spricer.png";
 import imgPivo from "./assets/pivo.png";
 import imgCasa from "./assets/casa.png";
 import imgCigareta from "./assets/cigareta.png";
+import imgWoodenBackground from "./assets/wooden-background.png";
+import imgWoodenDesk from "./assets/wooden-desk.png";
 import gameCompletedSound from "./assets/game-completed.wav";
 import gameLostSound from "./assets/game-lost.wav";
 import glassClinkSound from "./assets/glass-clink.wav";
@@ -726,6 +728,22 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
 
   // Debug logging
   console.log("Lobby render:", { gameMode, selectedBotMode, playersLength: players.length, hasSetSelectedBotMode: !!setSelectedBotMode });
+  
+  // Log start button visibility
+  useEffect(() => {
+    if (gameMode === "bots") {
+      const shouldShow = selectedBotMode !== null && selectedBotMode !== undefined && players.length === 0 && setSelectedBotMode && setPlayerId;
+      console.log('[LOBBY] Should show start button?', { 
+        gameMode, 
+        selectedBotMode, 
+        playersLength: players.length, 
+        hasSetSelectedBotMode: !!setSelectedBotMode, 
+        hasSetPlayerId: !!setPlayerId,
+        shouldShow 
+      });
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:730',message:'Checking start button visibility',data:{gameMode,selectedBotMode,playersLength:players.length,hasSetSelectedBotMode:!!setSelectedBotMode,hasSetPlayerId:!!setPlayerId,shouldShow},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    }
+  }, [gameMode, selectedBotMode, players.length, setSelectedBotMode, setPlayerId]);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -775,20 +793,46 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
             <div className="grid grid-cols-1 gap-4">
               <button
                 onClick={() => {
-                  // iOS Safari: unlock audio direktno na button click
-                  unlockAudioDirectly();
-                  
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:772',message:'2v2 (partner across) button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                  // #endregion
-                  if (!name.trim()) {
-                    setError("Unesite ime.");
-                    return;
+                  try {
+                    // iOS Safari: unlock audio direktno na button click
+                    if (typeof unlockAudioDirectly === 'function') {
+                      unlockAudioDirectly();
+                    }
+                    
+                    // #region agent log
+                    console.log('[LOBBY] 2v2 button clicked', { hasSetSelectedBotMode: !!setSelectedBotMode, name: name.trim() });
+                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:772',message:'2v2 (partner across) button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                    // #endregion
+                    
+                    if (!name.trim()) {
+                      setError("Unesite ime.");
+                      return;
+                    }
+                    
+                    // #region agent log
+                    console.log('[LOBBY] Setting selectedBotMode to 2v2', { hasSetSelectedBotMode: !!setSelectedBotMode });
+                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:790',message:'Setting selectedBotMode',data:{hasSetSelectedBotMode:!!setSelectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                    // #endregion
+                    
+                    if (typeof setSelectedBotMode === 'function') {
+                      setSelectedBotMode("2v2");
+                      // #region agent log
+                      console.log('[LOBBY] selectedBotMode set to 2v2');
+                      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:792',message:'selectedBotMode set successfully',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                      // #endregion
+                    } else {
+                      // #region agent log
+                      console.error('[LOBBY] setSelectedBotMode is not a function!', { type: typeof setSelectedBotMode, value: setSelectedBotMode });
+                      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:795',message:'setSelectedBotMode not available',data:{type:typeof setSelectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                      // #endregion
+                    }
+                    if (typeof setError === 'function') {
+                      setError("");
+                    }
+                  } catch (err) {
+                    console.error('[LOBBY] Error in 2v2 button onClick:', err);
+                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:808',message:'Error in 2v2 button onClick',data:{error:err.message,stack:err.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                   }
-                  if (setSelectedBotMode) {
-                    setSelectedBotMode("2v2");
-                  }
-                  if (setError) setError("");
                 }}
                 disabled={!name.trim()}
                 className="rounded-xl bg-emerald-500/10 ring-1 ring-emerald-400/20 p-6 hover:bg-emerald-500/15 transition disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02]"
@@ -959,10 +1003,33 @@ function WaitingRoom({ state, playerId, socket }) {
   const canStart = players.length === 4 && teamA.length === 2 && teamB.length === 2;
 
   function selectTeam(team) {
-    if (!socket || !me || me.team) return; // Already has team
+    // #region agent log
+    console.log('[WAITING_ROOM] selectTeam called', { team, hasSocket: !!socket, hasMe: !!me, myTeam: me?.team });
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:963',message:'selectTeam called',data:{team,hasSocket:!!socket,hasMe:!!me,myTeam:me?.team},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
+    if (!socket || !me || me.team) {
+      // #region agent log
+      console.log('[WAITING_ROOM] selectTeam blocked', { hasSocket: !!socket, hasMe: !!me, myTeam: me?.team });
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:965',message:'selectTeam blocked',data:{hasSocket:!!socket,hasMe:!!me,myTeam:me?.team},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      return; // Already has team
+    }
+    
     // iOS Safari: unlock audio direktno na button click
     unlockAudioDirectly();
+    
+    // #region agent log
+    console.log('[WAITING_ROOM] Emitting room:select-team', { team, socketConnected: socket.connected });
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:967',message:'Emitting room:select-team',data:{team,socketConnected:socket.connected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
     socket.emit("room:select-team", { team }, (res) => {
+      // #region agent log
+      console.log('[WAITING_ROOM] room:select-team response', res);
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:968',message:'room:select-team response',data:{ok:res?.ok,error:res?.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
       if (!res?.ok) {
         console.error("Failed to select team:", res?.error);
       }
@@ -1383,7 +1450,7 @@ function useAudioManager() {
     }
   }, []);
 
-  return { playSound, audioEnabled: audioEnabledRef.current };
+  return { playSound, unlockAudioDirectly, audioEnabled: audioEnabledRef.current };
 }
 
 function Game({ state, playerId, socket }) {
@@ -1745,7 +1812,17 @@ function Game({ state, playerId, socket }) {
   }, [fx?.id, fx?.kind]);
 
   return (
-    <div className={`min-h-screen p-4 ${screenShake ? 'animate-shake-screen' : ''}`}>
+    <div 
+      className={`min-h-screen p-4 ${screenShake ? 'animate-shake-screen' : ''}`}
+      style={imgWoodenBackground ? {
+        backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url(${imgWoodenBackground})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed'
+      } : {
+        background: 'linear-gradient(135deg, #2c1810 0%, #1a0f08 50%, #2c1810 100%)'
+      }}
+    >
       <CenterFx fx={fx} />
       {showProps ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -2081,7 +2158,14 @@ function Game({ state, playerId, socket }) {
               {/* Bottom (me) hand */}
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[min(820px,92%)]">
                 {/* Wooden shelf background */}
-                <div className="wooden-shelf rounded-t-3xl pt-4 pb-4 px-4">
+                <div 
+                  className="wooden-shelf rounded-t-3xl pt-4 pb-4 px-4"
+                  style={imgWoodenDesk ? {
+                    backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)), url(${imgWoodenDesk})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center top'
+                  } : {}}
+                >
                   <div className="flex items-end justify-between mb-2">
                     <div>
                       {byRel[0]?.id && bubbles[byRel[0].id]?.text ? (
@@ -2406,18 +2490,24 @@ export default function App() {
 
   // #region agent log
   useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2337',message:'App render state',data:{gameMode,playerId,statePhase:state?.phase,hasState:!!state},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
-  }, [gameMode, playerId, state?.phase]);
+    console.log('[APP] Render state changed', { gameMode, playerId, selectedBotMode, statePhase: state?.phase, hasState: !!state });
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2433',message:'App render state',data:{gameMode,playerId,selectedBotMode,statePhase:state?.phase,hasState:!!state},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+  }, [gameMode, playerId, selectedBotMode, state?.phase]);
   // #endregion
 
   // Show game mode selection first
   if (!gameMode) {
+    // #region agent log
+    console.log('[APP] Rendering GameModeSelection');
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2446',message:'Rendering GameModeSelection',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
     return <GameModeSelection onSelect={setGameMode} />;
   }
 
   if (!playerId) {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2409',message:'Rendering Lobby (no playerId)',data:{gameMode,selectedBotMode:selectedBotMode!==undefined?selectedBotMode:'UNDEFINED'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    console.log('[APP] Rendering Lobby (no playerId)', { gameMode, selectedBotMode });
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2454',message:'Rendering Lobby (no playerId)',data:{gameMode,selectedBotMode:selectedBotMode!==undefined?selectedBotMode:'UNDEFINED'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
     // #endregion
     return (
       <Lobby
@@ -2445,6 +2535,10 @@ export default function App() {
   }
 
   if (!state) {
+    // #region agent log
+    console.log('[APP] No state, showing loading', { playerId, error });
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2466',message:'No state, showing loading',data:{playerId,error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
     return (
       <div className="min-h-screen flex items-center justify-center text-white/70">
         <div className="text-center">
@@ -2456,6 +2550,10 @@ export default function App() {
   }
 
   if (state.phase === "lobby") {
+    // #region agent log
+    console.log('[APP] Rendering WaitingRoom', { phase: state.phase });
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2477',message:'Rendering WaitingRoom',data:{phase:state.phase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
     return <WaitingRoom state={state} playerId={playerId} socket={socketRef.current} />;
   }
 
