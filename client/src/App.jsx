@@ -418,13 +418,13 @@ function TalonStack({ count, topCard, seed, hideTop, ghostCard }) {
           zIndex: z
         }}
       >
-        {isTopLayer && topCard && !hideTop ? <Card card={topCard} compact={isMobile} /> : <CardBack compact={isMobile} />}
+        {isTopLayer && topCard && !hideTop ? <Card card={topCard} compact={false} /> : <CardBack compact={false} />}
       </div>
     );
   }
 
   return (
-    <div className="relative w-[280px] h-[260px] sm:w-[300px] sm:h-[280px] md:w-[280px] md:h-[260px]">
+    <div className="relative w-[320px] h-[300px] sm:w-[340px] sm:h-[320px] md:w-[360px] md:h-[340px]">
       {layers}
       {/* Ghost card - faded outline of last taken card */}
       {ghostCard && !hideTop && (
@@ -436,7 +436,7 @@ function TalonStack({ count, topCard, seed, hideTop, ghostCard }) {
             filter: "blur(1px) grayscale(0.8)"
           }}
         >
-          <Card card={ghostCard} compact={isMobile} />
+          <Card card={ghostCard} compact={false} />
         </div>
       )}
       <div className="absolute left-1/2 top-[78%] -translate-x-1/2 text-xs text-white/80 bg-black/35 ring-1 ring-white/10 rounded-full px-3 py-1">
@@ -482,9 +482,10 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
   const rv = rightVec[ownerRel];
   const cv = toCenter[ownerRel];
 
+  // Pozicija levo od igrača: koristi negativan rightVec da pomera levo
   const pos = {
-    left: `${b.x + cv.x * 10 + rv.x * 10}%`,
-    top: `${b.y + cv.y * 10 + rv.y * 10}%`
+    left: `${b.x + cv.x * 10 - rv.x * 10}%`,
+    top: `${b.y + cv.y * 10 - rv.y * 10}%`
   };
 
   // Smanjena visina deck-a: manje layera i manji offset
@@ -502,7 +503,7 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
           zIndex: i
         }}
       >
-        <CardBack compact={isMobile} />
+        <CardBack compact={false} />
       </div>
     );
   }
@@ -525,8 +526,8 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
             }}
           >
             {/* Clip so it looks like it is peeking out from bottom - samo gornji deo karte se vidi */}
-            <div className={`overflow-hidden ${isMobile ? "h-[42px]" : "h-[72px]"}`} style={{ clipPath: "inset(0 0 50% 0)" }}>
-              <Card card={deckPeekCard} compact={isMobile} />
+            <div className="overflow-hidden h-[96px]" style={{ clipPath: "inset(0 0 50% 0)" }}>
+              <Card card={deckPeekCard} compact={false} />
             </div>
           </div>
         ) : null}
@@ -661,14 +662,14 @@ function CardBack({ compact = false }) {
     <div
       className={[
         "rounded-lg shadow-lg ring-1 ring-black/10",
-        "bg-gradient-to-br from-indigo-700 to-indigo-950",
+        "bg-gradient-to-br from-red-900 to-red-950",
         "relative overflow-hidden",
         size
       ].join(" ")}
       aria-hidden="true"
     >
-      <div className="absolute inset-0 opacity-30 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.35),transparent_55%)]" />
-      <div className="absolute inset-0 opacity-20 bg-[linear-gradient(45deg,rgba(255,255,255,0.25)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.25)_50%,rgba(255,255,255,0.25)_75%,transparent_75%,transparent)] bg-[length:12px_12px]" />
+      <div className="absolute inset-0 opacity-40 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.5),transparent_55%)]" />
+      <div className="absolute inset-0 opacity-30 bg-[linear-gradient(45deg,rgba(255,255,255,0.4)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.4)_50%,rgba(255,255,255,0.4)_75%,transparent_75%,transparent)] bg-[length:12px_12px]" />
     </div>
   );
 }
@@ -1707,7 +1708,15 @@ function Game({ state, playerId, socket }) {
     const currentDrink = meNow.drink || "spricer";
     setPropsDrink(currentDrink);
     setPropsGlass(Boolean(meNow.glass));
-    setPropsCig(meNow.cigarette || null); // Can be null, "cigareta", or "sobranje"
+    // Handle cigarette: can be boolean (old) or string (new)
+    const currentCig = meNow.cigarette;
+    if (currentCig === true || currentCig === "cigareta") {
+      setPropsCig("cigareta");
+    } else if (currentCig === "sobranje") {
+      setPropsCig("sobranje");
+    } else {
+      setPropsCig(null);
+    }
     // Initialize previous drink ref
     previousDrinkRef.current = currentDrink;
   }, [roomPlayers, playerId]);
@@ -1817,16 +1826,26 @@ function Game({ state, playerId, socket }) {
 
   return (
     <div 
-      className={`min-h-screen p-4 ${screenShake ? 'animate-shake-screen' : ''}`}
+      className={`min-h-screen p-4 relative ${screenShake ? 'animate-shake-screen' : ''}`}
       style={imgWoodenBackground ? {
-        backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url(${imgWoodenBackground})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundAttachment: 'fixed'
+        position: 'relative'
       } : {
         background: 'linear-gradient(135deg, #2c1810 0%, #1a0f08 50%, #2c1810 100%)'
       }}
     >
+      {imgWoodenBackground && (
+        <div 
+          className="fixed inset-0 -z-10"
+          style={{
+            backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url(${imgWoodenBackground})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            backgroundAttachment: 'fixed',
+            filter: 'blur(12px)',
+            transform: 'scale(1.1)'
+          }}
+        />
+      )}
       <CenterFx fx={fx} />
       {showProps ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -1874,10 +1893,37 @@ function Game({ state, playerId, socket }) {
               Zelim casu
             </label>
 
-            <label className="mt-4 flex items-center gap-2 text-sm text-white/80 select-none">
-              <input type="checkbox" checked={propsCig} onChange={(e) => setPropsCig(e.target.checked)} />
-              Zelim cigaretu
-            </label>
+            <div className="mt-4">
+              <div className="text-sm text-white/80 mb-2">Cigarete:</div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: null, label: "Nema", img: null },
+                  { id: "cigareta", label: "Cigareta", img: imgCigareta },
+                  { id: "sobranje", label: "Sobranie", img: imgSobranje }
+                ].map((opt) => (
+                  <button
+                    key={opt.id || "none"}
+                    type="button"
+                    onClick={() => setPropsCig(opt.id)}
+                    className={[
+                      "rounded-2xl bg-black/25 ring-1 p-3 text-left transition",
+                      propsCig === opt.id ? "ring-emerald-400/40 bg-emerald-400/10" : "ring-white/10 hover:bg-black/35"
+                    ].join(" ")}
+                  >
+                    {opt.img ? (
+                      <div className="h-20 flex items-center justify-center">
+                        <img src={opt.img} alt="" className="max-h-20" />
+                      </div>
+                    ) : (
+                      <div className="h-20 flex items-center justify-center text-white/60">
+                        <span className="text-sm">—</span>
+                      </div>
+                    )}
+                    <div className="mt-2 text-sm font-semibold">{opt.label}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div className="mt-4 flex justify-end gap-2">
               <button
@@ -1957,7 +2003,6 @@ function Game({ state, playerId, socket }) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="text-2xl font-semibold">Zinga</div>
-            <SeatBadge label={`Vas tim: ${myTeamLabel}`} active />
             <span className="text-xs text-white/60">Soba: {state.roomId}</span>
           </div>
           <div className="flex items-center gap-2">
@@ -2088,7 +2133,7 @@ function Game({ state, playerId, socket }) {
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[2]?.name || "?"}</div>
                 <div className="text-xs text-white/60 mt-0.5">
-                  Karte: {getHandCount(byRel[2]?.id)} • {byRel[2]?.team ? `Tim ${byRel[2].team}` : ""}
+                  Karte: {getHandCount(byRel[2]?.id)}
                 </div>
                 {g?.turnSeat === byRel[2]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
@@ -2106,7 +2151,7 @@ function Game({ state, playerId, socket }) {
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[1]?.name || "?"}</div>
                 <div className="text-xs text-white/60 mt-0.5">
-                  Karte: {getHandCount(byRel[1]?.id)} • {byRel[1]?.team ? `Tim ${byRel[1].team}` : ""}
+                  Karte: {getHandCount(byRel[1]?.id)}
                 </div>
                 {g?.turnSeat === byRel[1]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
@@ -2124,21 +2169,13 @@ function Game({ state, playerId, socket }) {
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[3]?.name || "?"}</div>
                 <div className="text-xs text-white/60 mt-0.5">
-                  Karte: {getHandCount(byRel[3]?.id)} • {byRel[3]?.team ? `Tim ${byRel[3].team}` : ""}
+                  Karte: {getHandCount(byRel[3]?.id)}
                 </div>
                 {g?.turnSeat === byRel[3]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
 
               {/* Center table cards */}
               <div className="absolute inset-0 flex items-center justify-center">
-                {/* "Zinga" title on table */}
-                {!isDealing && (g?.tableCount ?? 0) === 0 && !lastCardTransition && (
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0">
-                    <div className="text-6xl sm:text-7xl md:text-8xl font-bold text-white/10 select-none" style={{ textShadow: '0 0 20px rgba(0,0,0,0.5)' }}>
-                      ZINGA
-                    </div>
-                  </div>
-                )}
                 <div
                   className="flex items-center justify-center"
                   style={{ transform: `translate(${talonOffset.x}px, ${talonOffset.y}px)` }}
@@ -2184,7 +2221,7 @@ function Game({ state, playerId, socket }) {
                       ) : null}
                       <div className="text-white/90 font-semibold">{byRel[0]?.name || "Vi"}</div>
                       <div className="text-xs text-white/70 mt-0.5">
-                        Karte: {myHand.length} • {myTeamLabel}
+                        Karte: {myHand.length}
                       </div>
                     </div>
                   <div className="flex items-end gap-3">
@@ -2217,12 +2254,12 @@ function Game({ state, playerId, socket }) {
                       card={c}
                       onClick={() => playCard(c)}
                       disabled={!isMyTurn || state.phase !== "playing" || isDealing}
-                      showPoints={true}
+                      showPoints={false}
                     />
                   ))}
                   {Array.from({ length: Math.max(0, Math.max(myHand.length, 4) - clamp(handRevealCount, 0, myHand.length)) }).map((_, i) => (
                     <div key={`back-${i}`} className="pointer-events-none">
-                      <CardBack compact={isMobile} />
+                      <CardBack compact={false} />
                     </div>
                   ))}
                   {myHand.length === 0 ? <div className="text-white/70 text-sm">Nemate karata (cekanje deljenja)...</div> : null}

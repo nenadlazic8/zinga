@@ -125,7 +125,7 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
     hands,
     turnSeat: startSeat,
     dealSeat: startSeat,
-    deckOwnerSeat: (startSeat - 1 + 4) % 4, // One seat behind first player in counter-clockwise order (last player to play)
+    deckOwnerSeat: (startSeat + 1) % 4, // Left of first player in counter-clockwise order
     lastTakerPlayerId: null,
     lastAction: null,
     lastDeal: { id: 0, isLast: false, round: 1, hand: room.match?.hand ?? null },
