@@ -813,6 +813,10 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
             </div>
             <button
               onClick={() => {
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:809',message:'Start bot game button clicked',data:{name:name.trim(),selectedBotMode,hasSetJoining:!!setJoining,hasSetError:!!setError,hasSetPlayerId:!!setPlayerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                // #endregion
+                
                 // iOS Safari: unlock audio direktno na button click
                 unlockAudioDirectly();
                 
@@ -821,6 +825,9 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                   return;
                 }
                 if (!setJoining || !setError || !setPlayerId) {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:823',message:'Missing required functions',data:{setJoining:!!setJoining,setError:!!setError,setPlayerId:!!setPlayerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  // #endregion
                   console.error("Missing required functions:", { setJoining: !!setJoining, setError: !!setError, setPlayerId: !!setPlayerId });
                   return;
                 }
@@ -828,9 +835,16 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                 setError("");
                 const s = ensureSocket();
                 const handleResponse = (res) => {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:831',message:'room:create-bots response',data:{ok:res?.ok,error:res?.error,playerId:res?.playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  // #endregion
+                  
                   if (setJoining) setJoining(false);
                   console.log("Bot creation response:", res);
                   if (res?.ok) {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:835',message:'Setting playerId from bot creation',data:{playerId:res.playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                    // #endregion
                     console.log("Setting playerId:", res.playerId);
                     if (setPlayerId) setPlayerId(res.playerId);
                     // State will be updated via socket "state" event
@@ -840,12 +854,21 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
                 };
                 
                 if (!s || !s.connected) {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:838',message:'Socket not connected, waiting for connect',data:{socketExists:!!s,connected:s?.connected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                  // #endregion
                   if (setError) setError("Cekam konekciju sa serverom...");
                   s.once("connect", () => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:841',message:'Socket connected, emitting room:create-bots',data:{roomId,name,botMode:selectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                    // #endregion
                     console.log("Socket connected, emitting room:create-bots");
                     s.emit("room:create-bots", { roomId, name, botMode: selectedBotMode }, handleResponse);
                   });
                 } else {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:845',message:'Socket already connected, emitting room:create-bots',data:{roomId,name,botMode:selectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  // #endregion
                   console.log("Socket already connected, emitting room:create-bots");
                   s.emit("room:create-bots", { roomId, name, botMode: selectedBotMode }, handleResponse);
                 }
@@ -2270,37 +2293,68 @@ export default function App() {
   }, []);
 
   function ensureSocket() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2272',message:'ensureSocket called',data:{hasSocket:!!socketRef.current,connected:socketRef.current?.connected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     if (socketRef.current) {
       // If socket exists but not connected, try to connect
       if (!socketRef.current.connected) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2276',message:'Reconnecting socket',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
         socketRef.current.connect();
       }
       return socketRef.current;
     }
     const s = createSocket();
     socketRef.current = s;
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2281',message:'Socket created, setting up listeners',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     s.on("state", (next) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2283',message:'State event received',data:{phase:next?.phase,roomId:next?.roomId,hasGame:!!next?.game,playersCount:next?.players?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+      
       console.log("Received state event:", next?.phase, next?.roomId);
       if (next) {
         // Validate state before setting
         if (next.phase === "playing" && !next.game) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2287',message:'Invalid state: playing without game',data:{phase:next.phase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
           console.error("Received state with phase='playing' but game is null!");
           setError("Greska: Igra nije spremna. Cekam podatke od servera...");
           return;
         }
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2292',message:'Setting state',data:{phase:next.phase,playersCount:next.players?.length,hasGame:!!next.game},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
         console.log("Setting state:", next.phase, "players:", next.players?.length);
         setState(next);
         setError(""); // Clear any previous errors
       }
     });
     s.on("connect", () => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2296',message:'Socket connected',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       setError(""); // Clear errors on successful connection
     });
     s.on("connect_error", (err) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2299',message:'Socket connect error',data:{error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       console.error("Socket connect error:", err);
       setError("Ne mogu da se povezem sa serverom.");
     });
     s.on("disconnect", (reason) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2303',message:'Socket disconnected',data:{reason},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
       // Don't clear state on intentional disconnects or reconnection attempts
       if (reason === "io server disconnect" || reason === "transport close") {
         // Server or network issue - keep state but show error
@@ -2321,18 +2375,40 @@ export default function App() {
   }
 
   function join() {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2323',message:'join called',data:{roomId,name,gameMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
     setError("");
     setJoining(true);
     const s = ensureSocket();
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2327',message:'Emitting room:join',data:{roomId,name,gameMode,socketConnected:s.connected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
     s.emit("room:join", { roomId, name, gameMode }, (res) => {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2328',message:'room:join response',data:{ok:res?.ok,error:res?.error,playerId:res?.playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
       setJoining(false);
       if (!res?.ok) {
         setError(res?.error || "Greska.");
         return;
       }
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2333',message:'Setting playerId',data:{playerId:res.playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       setPlayerId(res.playerId);
     });
   }
+
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2337',message:'App render state',data:{gameMode,playerId,statePhase:state?.phase,hasState:!!state},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+  }, [gameMode, playerId, state?.phase]);
+  // #endregion
 
   // Show game mode selection first
   if (!gameMode) {
@@ -2341,7 +2417,7 @@ export default function App() {
 
   if (!playerId) {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2009',message:'Rendering Lobby component',data:{gameMode,selectedBotMode:selectedBotMode!==undefined?selectedBotMode:'UNDEFINED',hasSelectedBotMode:selectedBotMode!==undefined,hasSetSelectedBotMode:!!setSelectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2409',message:'Rendering Lobby (no playerId)',data:{gameMode,selectedBotMode:selectedBotMode!==undefined?selectedBotMode:'UNDEFINED'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
     // #endregion
     return (
       <Lobby
@@ -2406,6 +2482,9 @@ export default function App() {
   try {
     // Guard: don't render Game if game state is missing
     if (state.phase === "playing" && !state.game) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2484',message:'Guard: playing phase without game',data:{phase:state.phase,hasGame:!!state.game},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       console.error("Phase is 'playing' but state.game is null!");
       return (
         <div className="min-h-screen flex items-center justify-center text-white/70">
@@ -2425,8 +2504,15 @@ export default function App() {
         </div>
       );
     }
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2504',message:'Rendering Game component',data:{playerId,statePhase:state?.phase,hasState:!!state,hasGame:!!state?.game},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
+    
     return <Game state={state} playerId={playerId} socket={socketRef.current} />;
   } catch (err) {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2506',message:'Error rendering Game component',data:{error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'F'})}).catch(()=>{});
+    // #endregion
     console.error("Error rendering Game component:", err);
     return (
       <div className="min-h-screen flex items-center justify-center text-white/70">
