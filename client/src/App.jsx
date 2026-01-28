@@ -717,6 +717,9 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
   fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:715',message:'Lobby component entry',data:{gameMode,selectedBotMode:selectedBotMode!==undefined?selectedBotMode:'UNDEFINED',hasSetSelectedBotMode:!!setSelectedBotMode,hasSetPlayerId:!!setPlayerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
   // #endregion
   
+  // iOS Safari: unlock audio direktno iz Lobby komponente
+  const { unlockAudioDirectly } = useAudioManager();
+  
   const players = state?.players || [];
   const teamA = players.filter((p) => p.team === "A");
   const teamB = players.filter((p) => p.team === "B");
@@ -772,6 +775,9 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
             <div className="grid grid-cols-1 gap-4">
               <button
                 onClick={() => {
+                  // iOS Safari: unlock audio direktno na button click
+                  unlockAudioDirectly();
+                  
                   // #region agent log
                   fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:772',message:'2v2 (partner across) button clicked',data:{hasSetSelectedBotMode:!!setSelectedBotMode,name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                   // #endregion
@@ -807,6 +813,9 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
             </div>
             <button
               onClick={() => {
+                // iOS Safari: unlock audio direktno na button click
+                unlockAudioDirectly();
+                
                 if (!name.trim()) {
                   setError("Unesite ime.");
                   return;
@@ -928,6 +937,8 @@ function WaitingRoom({ state, playerId, socket }) {
 
   function selectTeam(team) {
     if (!socket || !me || me.team) return; // Already has team
+    // iOS Safari: unlock audio direktno na button click
+    unlockAudioDirectly();
     socket.emit("room:select-team", { team }, (res) => {
       if (!res?.ok) {
         console.error("Failed to select team:", res?.error);
@@ -1046,6 +1057,71 @@ function useAudioManager() {
   const audioContextRef = useRef(null);
   const audioEnabledRef = useRef(false);
   const audioInstancesRef = useRef({});
+  const audioUnlockAttemptedRef = useRef(false);
+  
+  // iOS Safari: eksplicitna funkcija za unlock audio direktno iz button handlera
+  const unlockAudioDirectly = useCallback(() => {
+    if (audioUnlockAttemptedRef.current) return; // Već pokušano
+    audioUnlockAttemptedRef.current = true;
+    
+    // #region agent log
+    console.log('[AUDIO] unlockAudioDirectly called');
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1050',message:'unlockAudioDirectly called',data:{userAgent:navigator.userAgent},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
+    audioEnabledRef.current = true;
+    
+    const sounds = {
+      cardDrop: cardDropSound,
+      cardDeal: cardDealSound,
+      cardsTaken: cardsTakenSound,
+      glassClink: glassClinkSound,
+      beerOpen: beerOpenSound,
+      pivoOpen: pivoOpenSound,
+    };
+    
+    // Kreiraj audio instance SINHRONO
+    Object.keys(sounds).forEach((key) => {
+      try {
+        const audio = new Audio(sounds[key]);
+        audio.preload = 'auto';
+        audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
+        audioInstancesRef.current[key] = audio;
+        
+        // Pokušaj unlock direktno
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          playPromise
+            .then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+              // #region agent log
+              console.log(`[AUDIO] Unlocked ${key}`);
+              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1070',message:'Direct unlock success',data:{soundKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+              // #endregion
+            })
+            .catch((err) => {
+              // #region agent log
+              console.log(`[AUDIO] Unlock failed ${key}:`, err);
+              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1075',message:'Direct unlock failed',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+              // #endregion
+            });
+        }
+      } catch (err) {
+        // #region agent log
+        console.log(`[AUDIO] Failed to create ${key}:`, err);
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1080',message:'Direct unlock creation failed',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
+      }
+    });
+    
+    // Silent audio unlock za iOS Safari
+    try {
+      const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+      silentAudio.volume = 0.01;
+      silentAudio.play().catch(() => {});
+    } catch {}
+  }, []);
 
   // Enable audio on first user interaction
   // iOS Safari zahteva da se audio.play() pozove DIREKTNO unutar user gesture handlera (ne async)
@@ -1291,7 +1367,7 @@ function Game({ state, playerId, socket }) {
   const roomPlayers = state.players || [];
   const me = roomPlayers.find((p) => p.id === playerId);
   const g = state.game;
-  const { playSound } = useAudioManager();
+  const { playSound, unlockAudioDirectly } = useAudioManager();
   
   // Early return if game state is not ready
   if (!g) {
@@ -1577,6 +1653,8 @@ function Game({ state, playerId, socket }) {
 
   function playCard(card) {
     if (!socket) return;
+    // iOS Safari: unlock audio direktno na button click
+    unlockAudioDirectly();
     setActionError("");
     socket.emit("game:play", { cardId: card.id }, (res) => {
       if (!res?.ok) setActionError(res?.error || "Gre?ka.");
@@ -1904,6 +1982,9 @@ function Game({ state, playerId, socket }) {
                   </div>
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[2]?.name || "?"}</div>
+                <div className="text-xs text-white/60 mt-0.5">
+                  Karte: {getHandCount(byRel[2]?.id)} • {byRel[2]?.team ? `Tim ${byRel[2].team}` : ""}
+                </div>
                 {g?.turnSeat === byRel[2]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
 
@@ -1919,6 +2000,9 @@ function Game({ state, playerId, socket }) {
                   </div>
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[1]?.name || "?"}</div>
+                <div className="text-xs text-white/60 mt-0.5">
+                  Karte: {getHandCount(byRel[1]?.id)} • {byRel[1]?.team ? `Tim ${byRel[1].team}` : ""}
+                </div>
                 {g?.turnSeat === byRel[1]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
 
@@ -1934,11 +2018,22 @@ function Game({ state, playerId, socket }) {
                   </div>
                 ) : null}
                 <div className="text-white/80 text-sm font-semibold">{byRel[3]?.name || "?"}</div>
+                <div className="text-xs text-white/60 mt-0.5">
+                  Karte: {getHandCount(byRel[3]?.id)} • {byRel[3]?.team ? `Tim ${byRel[3].team}` : ""}
+                </div>
                 {g?.turnSeat === byRel[3]?.seat ? <div className="text-xs text-emerald-200 mt-1">Na potezu</div> : null}
               </div>
 
               {/* Center table cards */}
               <div className="absolute inset-0 flex items-center justify-center">
+                {/* "Zinga" title on table */}
+                {!isDealing && (g?.tableCount ?? 0) === 0 && !lastCardTransition && (
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-0">
+                    <div className="text-6xl sm:text-7xl md:text-8xl font-bold text-white/10 select-none" style={{ textShadow: '0 0 20px rgba(0,0,0,0.5)' }}>
+                      ZINGA
+                    </div>
+                  </div>
+                )}
                 <div
                   className="flex items-center justify-center"
                   style={{ transform: `translate(${talonOffset.x}px, ${talonOffset.y}px)` }}
@@ -1961,20 +2056,25 @@ function Game({ state, playerId, socket }) {
               </div>
 
               {/* Bottom (me) hand */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[min(820px,92%)]">
-                <div className="flex items-end justify-between mb-2">
-                  <div>
-                    {byRel[0]?.id && bubbles[byRel[0].id]?.text ? (
-                      <div className={`mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-white/90 animate-chat-fade-out ${
-                        isOnlyEmoji(bubbles[byRel[0].id].text) 
-                          ? "text-2xl translate-x-2" 
-                          : "text-xs"
-                      }`}>
-                        {bubbles[byRel[0].id].text}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[min(820px,92%)]">
+                {/* Wooden shelf background */}
+                <div className="wooden-shelf rounded-t-3xl pt-4 pb-4 px-4">
+                  <div className="flex items-end justify-between mb-2">
+                    <div>
+                      {byRel[0]?.id && bubbles[byRel[0].id]?.text ? (
+                        <div className={`mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-white/90 animate-chat-fade-out ${
+                          isOnlyEmoji(bubbles[byRel[0].id].text) 
+                            ? "text-2xl translate-x-2" 
+                            : "text-xs"
+                        }`}>
+                          {bubbles[byRel[0].id].text}
+                        </div>
+                      ) : null}
+                      <div className="text-white/90 font-semibold">{byRel[0]?.name || "Vi"}</div>
+                      <div className="text-xs text-white/70 mt-0.5">
+                        Karte: {myHand.length} • {myTeamLabel}
                       </div>
-                    ) : null}
-                    <div className="text-white/90 font-semibold">{byRel[0]?.name || "Vi"}</div>
-                  </div>
+                    </div>
                   <div className="flex items-end gap-3">
                     <button
                       type="button"
@@ -2005,6 +2105,7 @@ function Game({ state, playerId, socket }) {
                       card={c}
                       onClick={() => playCard(c)}
                       disabled={!isMyTurn || state.phase !== "playing" || isDealing}
+                      showPoints={true}
                     />
                   ))}
                   {Array.from({ length: Math.max(0, Math.max(myHand.length, 4) - clamp(handRevealCount, 0, myHand.length)) }).map((_, i) => (
@@ -2014,12 +2115,13 @@ function Game({ state, playerId, socket }) {
                   ))}
                   {myHand.length === 0 ? <div className="text-white/70 text-sm">Nemate karata (cekanje deljenja)...</div> : null}
                 </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="rounded-3xl bg-white/5 ring-1 ring-white/10 p-4 h-fit">
+          {/* Sidebar - Wooden panel */}
+          <div className="wooden-panel rounded-3xl p-4 h-fit">
             <div className="text-sm font-semibold mb-3">Rezultat</div>
             
             {/* Progress bars to 101 */}
