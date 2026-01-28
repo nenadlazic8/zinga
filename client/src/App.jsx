@@ -557,12 +557,12 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
           <div
             className="absolute left-1/2 top-full"
             style={{
-              transform: "translate(-50%, -4px) rotate(6deg)",
+              transform: "translate(-50%, 8px) rotate(6deg)",
               zIndex: 10
             }}
           >
-            {/* Clip so it looks like it is peeking out from table - samo gornji deo karte se vidi */}
-            <div className="overflow-hidden h-[24px]" style={{ clipPath: "inset(0 0 65% 0)" }}>
+            {/* Clip so it looks like it is peeking out from table - prikaži više karte da bude vidljiva */}
+            <div className="overflow-hidden h-[40px]" style={{ clipPath: "inset(0 0 40% 0)" }}>
               <Card card={deckPeekCard} compact={true} />
             </div>
           </div>
@@ -2285,7 +2285,7 @@ function Game({ state, playerId, socket }) {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 justify-center">
+                <div className="flex flex-wrap gap-2 justify-center">
                   {myHand.slice(0, clamp(handRevealCount, 0, myHand.length)).map((c) => (
                     <Card
                       key={c.id}
@@ -2293,12 +2293,12 @@ function Game({ state, playerId, socket }) {
                       onClick={() => playCard(c)}
                       disabled={!isMyTurn || state.phase !== "playing" || isDealing}
                       showPoints={false}
-                      compact={true}
+                      compact={false}
                     />
                   ))}
                   {Array.from({ length: Math.max(0, Math.max(myHand.length, 4) - clamp(handRevealCount, 0, myHand.length)) }).map((_, i) => (
                     <div key={`back-${i}`} className="pointer-events-none">
-                      <CardBack compact={true} />
+                      <CardBack compact={false} />
                     </div>
                   ))}
                 </div>
