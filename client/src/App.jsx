@@ -1642,8 +1642,8 @@ function Game({ state, playerId, socket }) {
     const to = { x: Math.round((r() - 0.5) * 34), y: Math.round((r() - 0.5) * 22) };
     setTalonOffset(to);
 
-    // Play card drop sound when card is dropped on table
-    if (a.type === "drop") {
+    // Play card drop sound when card is dropped on table (for all types: drop, take, jack_take)
+    if (a.type === "drop" || a.type === "take" || a.type === "jack_take") {
       playSound('cardDrop', 0.3);
     }
 
@@ -1756,6 +1756,8 @@ function Game({ state, playerId, socket }) {
     if (!socket) return;
     // iOS Safari: unlock audio direktno na button click
     unlockAudioDirectly();
+    // Play sound immediately when card is clicked (before server response)
+    playSound('cardDrop', 0.3);
     setActionError("");
     socket.emit("game:play", { cardId: card.id }, (res) => {
       if (!res?.ok) setActionError(res?.error || "Gre?ka.");
@@ -2262,7 +2264,6 @@ function Game({ state, playerId, socket }) {
                       <CardBack compact={false} />
                     </div>
                   ))}
-                  {myHand.length === 0 ? <div className="text-white/70 text-sm">Nemate karata (cekanje deljenja)...</div> : null}
                 </div>
                 </div>
               </div>
