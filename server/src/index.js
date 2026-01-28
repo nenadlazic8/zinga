@@ -5,6 +5,7 @@ import { Server } from "socket.io";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
+import { appendFileSync } from "node:fs";
 import { computeTeamScore, createDeck, shuffleInPlace, teamForSeat } from "./game.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -383,12 +384,24 @@ function applyPlay(room, playerId, cardId) {
 
   if (took) {
     const team = player.team;
+    // #region agent log
+    const logData = {location:'index.js:384',message:'Cards taken - before assignment',data:{playerId,playerName:player.name,playerTeam:player.team,takenCount:taken.length,teamACardsBefore:g.captures.A.cards.length,teamBCardsBefore:g.captures.B.cards.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+    try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+    // #endregion
     if (!team) {
+      // #region agent log
+      const logData = {location:'index.js:387',message:'Player has no team!',data:{playerId,playerName:player.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+      // #endregion
       console.error("Player", player.id, "has no team!");
       return; // Safety check
     }
     g.captures[team].cards.push(...taken);
     g.lastTakerPlayerId = playerId;
+    // #region agent log
+    const logData2 = {location:'index.js:390',message:'Cards taken - after assignment',data:{playerId,playerName:player.name,playerTeam:team,assignedToTeam:team,takenCount:taken.length,teamACardsAfter:g.captures.A.cards.length,teamBCardsAfter:g.captures.B.cards.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+    try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData2) + '\n'); } catch {}
+    // #endregion
     
     // Check and update bonus for most cards (27+) immediately
     const aCards = g.captures.A.cards.length;
@@ -562,6 +575,12 @@ function sanitizeStateFor(room, viewerPlayerId) {
 
   const viewer = viewerPlayerId ? findPlayer(room, viewerPlayerId) : null;
   const viewerTeam = viewer?.team || null; // Team is now selected by player, not based on seat
+  // #region agent log
+  if (g && viewerPlayerId) {
+    const logData = {location:'index.js:577',message:'sanitizeStateFor - viewer info',data:{viewerPlayerId,viewerName:viewer?.name,viewerTeam,teamACards:g.captures.A.cards.length,teamBCards:g.captures.B.cards.length,lastTakerPlayerId:g.lastTakerPlayerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+    try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+  }
+  // #endregion
 
   const players = room.players
     .slice()
@@ -612,6 +631,12 @@ function sanitizeStateFor(room, viewerPlayerId) {
   const deckPeekCard = g.deck.length ? g.deck[0] : null;
   const aPileTop = g.captures.A.cards.length ? g.captures.A.cards[g.captures.A.cards.length - 1] : null;
   const bPileTop = g.captures.B.cards.length ? g.captures.B.cards[g.captures.B.cards.length - 1] : null;
+  // #region agent log
+  if (viewerPlayerId) {
+    const logData = {location:'index.js:609',message:'sanitizeStateFor - scores and cards',data:{viewerPlayerId,viewerTeam,teamAScore:aScore.total,teamBScore:bScore.total,teamACards:g.captures.A.cards.length,teamBCards:g.captures.B.cards.length,willSendTeamACards:viewerTeam==='A',willSendTeamBCards:viewerTeam==='B'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+    try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+  }
+  // #endregion
 
   return {
     roomId: room.id,
@@ -675,6 +700,12 @@ function broadcastRoom(room) {
     if (!p.socketId) continue; // Skip bots
     try {
       const state = sanitizeStateFor(room, p.id);
+      // #region agent log
+      if (state && room.game) {
+        const logData = {location:'index.js:702',message:'broadcastRoom - sending personalized state',data:{playerId:p.id,playerName:p.name,playerTeam:p.team,viewerTeam:state.viewerTeam,teamACards:state.game?.captures?.A?.cardsCount,teamBCards:state.game?.captures?.B?.cardsCount,teamAScore:state.game?.captures?.A?.total,teamBScore:state.game?.captures?.B?.total},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
+        try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+      }
+      // #endregion
       if (state) {
         io.to(p.socketId).emit("state", state);
       }
@@ -1035,13 +1066,26 @@ io.on("connection", (socket) => {
     try {
       const roomId = socket.data.roomId;
       const playerId = socket.data.playerId;
+      // #region agent log
+      const logData = {location:'index.js:1050',message:'game:play received',data:{roomId,playerId,cardId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+      // #endregion
       if (!roomId || !playerId) throw new Error("Niste u sobi.");
       const room = rooms.get(roomId);
       if (!room) throw new Error("Soba nije pronađena.");
+      const player = findPlayer(room, playerId);
+      // #region agent log
+      const logData2 = {location:'index.js:1056',message:'game:play - player info',data:{playerId,playerName:player?.name,playerTeam:player?.team,currentTurnSeat:room.game?.turnSeat,playerSeat:player?.seat},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData2) + '\n'); } catch {}
+      // #endregion
       applyPlay(room, playerId, String(cardId));
       broadcastRoom(room);
       ack?.({ ok: true });
     } catch (e) {
+      // #region agent log
+      const logData3 = {location:'index.js:1061',message:'game:play error',data:{error:e?.message,stack:e?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData3) + '\n'); } catch {}
+      // #endregion
       ack?.({ ok: false, error: e?.message || "Greška." });
     }
   });

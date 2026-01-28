@@ -18,6 +18,9 @@ import pivoOpenSound from "./assets/pivo-open.mp3";
 import victoryFanfareSound from "./assets/victory-fanfare.mp3";
 import cardsTakenSound from "./assets/cards-taken.wav";
 import cardDealSound from "./assets/card-deal.mp3";
+import doubleKillSound from "./assets/double-kill.mp3";
+import tripleKillSound from "./assets/triple-kill.mp3";
+import zingaSound from "./assets/zinga.mp3";
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -459,45 +462,21 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
 
   const ownerRel = relativePos(mySeat, deckOwnerSeat ?? 0);
 
-  const seatBase = {
-    0: { x: 50, y: 82 }, // bottom
-    1: { x: 16, y: 50 }, // left
-    2: { x: 50, y: 16 }, // top
-    3: { x: 84, y: 50 } // right
-  };
-  const rightVec = {
-    0: { x: 1, y: 0 },
-    1: { x: 0, y: -1 },
-    2: { x: -1, y: 0 },
-    3: { x: 0, y: 1 }
-  };
-  const toCenter = {
-    0: { x: 0, y: -1 },
-    1: { x: 1, y: 0 },
-    2: { x: 0, y: 1 },
-    3: { x: -1, y: 0 }
-  };
-
-  const b = seatBase[ownerRel];
-  const rv = rightVec[ownerRel];
-  const cv = toCenter[ownerRel];
-
   // Pozicija relativno u odnosu na igrača koji poseduje spil:
-  // - Ako je sa leve ili desne strane (ownerRel === 1 ili 3): iznad imena igrača
-  // - Ako je gore (ownerRel === 2): sa leve strane imena igrača
+  // Fiksirano dole, ispod imena igrača - horizontalna pozicija zavisi od igrača, vertikalna je uvek dole
   let pos;
   if (ownerRel === 1) {
-    // Left: iznad imena (left-4 je na left-4, ime je na top-1/2, spil treba da bude iznad na ~38%)
-    pos = { left: "4%", top: "38%" };
+    // Left: levo dole
+    pos = { left: "4%", bottom: "20px" };
   } else if (ownerRel === 3) {
-    // Right: iznad imena (right-4 je na right-4, ime je na top-1/2, spil treba da bude iznad na ~38%)
-    pos = { left: "96%", top: "38%" };
+    // Right: desno dole
+    pos = { left: "96%", bottom: "20px" };
   } else if (ownerRel === 2) {
-    // Top: sa leve strane imena (ime je centrirano gore na top-4 left-1/2, spil levo od centra na ~38%)
-    pos = { left: "38%", top: "4%" };
+    // Top: centar dole (jer je gore, ali deck mora biti dole)
+    pos = { left: "50%", bottom: "20px" };
   } else {
-    // Fallback: centar stola
-    pos = { left: "50%", top: "20%" };
+    // Bottom (moj deck): centar dole
+    pos = { left: "50%", bottom: "20px" };
   }
 
   // Smanjena visina deck-a: manje layera i manji offset
@@ -522,49 +501,45 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
 
   // Duplo manja veličina: w-8 h-12 (bilo w-16 h-24)
   const deckSize = "w-8 h-12";
-  
-  // Određujemo transform origin i offset u zavisnosti od pozicije
-  let transformOrigin, translateOffset;
-  if (ownerRel === 1 || ownerRel === 3) {
-    // Za left/right: rotacija oko donje ivice, pomereno gore da viri iz stola
-    transformOrigin = "center bottom";
-    translateOffset = "translate(-50%, -16px)";
-  } else if (ownerRel === 2) {
-    // Za top: rotacija oko desne ivice, pomereno levo da viri iz stola
-    transformOrigin = "right center";
-    translateOffset = "translate(16px, -50%)";
-  } else {
-    // Fallback
-    transformOrigin = "center bottom";
-    translateOffset = "translate(-50%, -24px)";
-  }
 
   return (
     <div 
       className="absolute pointer-events-none" 
       style={{ 
         left: pos.left,
-        top: pos.top,
-        transform: `${translateOffset} rotate(90deg)`,
-        transformOrigin: transformOrigin
+        bottom: pos.bottom,
+        transform: "translate(-50%, 0)",
+        transformOrigin: "center bottom"
       }}
     >
       <div className={`relative ${deckSize}`}>
-        {backLayers}
-
-        {/* Peek card (last card of deck) - viri iz stola, rotirana za 90 stepeni */}
+        {/* Peek card (last card of deck) - preko spila, samo malo se vidi spil */}
         {deckPeekCard ? (
           <div
-            className="absolute left-1/2 top-full"
+            className="absolute left-1/2 bottom-full"
             style={{
-              transform: "translate(-50%, 8px) rotate(6deg)",
-              zIndex: 10
+              transform: "translate(-50%, 0)",
+              zIndex: 15
             }}
           >
-            {/* Clip so it looks like it is peeking out from table - prikaži više karte da bude vidljiva */}
-            <div className="overflow-hidden h-[40px]" style={{ clipPath: "inset(0 0 40% 0)" }}>
-              <Card card={deckPeekCard} compact={true} />
-            </div>
+            <Card card={deckPeekCard} compact={true} />
+          </div>
+        ) : null}
+        
+        {/* Deck layers - malo se vidi ispod karte */}
+        <div className="relative" style={{ zIndex: 5, marginTop: deckPeekCard ? "-8px" : "0" }}>
+          {backLayers}
+        </div>
+        
+        {/* Ako je kod mene, ispisati koja je karta */}
+        {ownerRel === 0 && deckPeekCard ? (
+          <div className="absolute left-1/2 top-full mt-1 text-xs text-white/90 font-semibold whitespace-nowrap pointer-events-auto" style={{ transform: "translate(-50%, 0)" }}>
+            {deckPeekCard.suit === "hearts" && "♥"}
+            {deckPeekCard.suit === "diamonds" && "♦"}
+            {deckPeekCard.suit === "clubs" && "♣"}
+            {deckPeekCard.suit === "spades" && "♠"}
+            {" "}
+            {deckPeekCard.rank === "A" ? "A" : deckPeekCard.rank === "K" ? "K" : deckPeekCard.rank === "Q" ? "Q" : deckPeekCard.rank === "J" ? "J" : deckPeekCard.rank}
           </div>
         ) : null}
       </div>
@@ -897,60 +872,72 @@ function Lobby({ onJoin, joining, error, roomId, setRoomId, name, setName, state
             <button
               onClick={() => {
                 // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:809',message:'Start bot game button clicked',data:{name:name.trim(),selectedBotMode,hasSetJoining:!!setJoining,hasSetError:!!setError,hasSetPlayerId:!!setPlayerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:870',message:'Start bot game button clicked',data:{name:name.trim(),selectedBotMode,joining,hasSetJoining:!!setJoining,hasSetError:!!setError,hasSetPlayerId:!!setPlayerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
                 // #endregion
                 
                 // iOS Safari: unlock audio direktno na button click
                 unlockAudioDirectly();
                 
                 if (!name.trim()) {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:878',message:'Name validation failed',data:{name:name.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                  // #endregion
                   setError("Unesite ime.");
                   return;
                 }
                 if (!setJoining || !setError || !setPlayerId) {
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:823',message:'Missing required functions',data:{setJoining:!!setJoining,setError:!!setError,setPlayerId:!!setPlayerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:882',message:'Missing required functions',data:{setJoining:!!setJoining,setError:!!setError,setPlayerId:!!setPlayerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
                   // #endregion
                   console.error("Missing required functions:", { setJoining: !!setJoining, setError: !!setError, setPlayerId: !!setPlayerId });
                   return;
                 }
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:889',message:'Setting joining=true before emit',data:{joiningBefore:joining},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                // #endregion
                 setJoining(true);
                 setError("");
                 const s = ensureSocket();
                 const handleResponse = (res) => {
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:831',message:'room:create-bots response',data:{ok:res?.ok,error:res?.error,playerId:res?.playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:892',message:'room:create-bots response received',data:{ok:res?.ok,error:res?.error,playerId:res?.playerId,hasSetJoining:!!setJoining},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                   // #endregion
                   
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:897',message:'Setting joining=false after response',data:{ok:res?.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                  // #endregion
                   if (setJoining) setJoining(false);
                   console.log("Bot creation response:", res);
                   if (res?.ok) {
                     // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:835',message:'Setting playerId from bot creation',data:{playerId:res.playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:899',message:'Setting playerId from bot creation',data:{playerId:res.playerId,hasSetPlayerId:!!setPlayerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
                     // #endregion
                     console.log("Setting playerId:", res.playerId);
                     if (setPlayerId) setPlayerId(res.playerId);
                     // State will be updated via socket "state" event
                   } else {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:907',message:'Bot creation failed',data:{error:res?.error},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                    // #endregion
                     if (setError) setError(res?.error || "Greska.");
                   }
                 };
                 
                 if (!s || !s.connected) {
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:838',message:'Socket not connected, waiting for connect',data:{socketExists:!!s,connected:s?.connected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:911',message:'Socket not connected, waiting for connect',data:{socketExists:!!s,connected:s?.connected},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
                   // #endregion
                   if (setError) setError("Cekam konekciju sa serverom...");
                   s.once("connect", () => {
                     // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:841',message:'Socket connected, emitting room:create-bots',data:{roomId,name,botMode:selectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:916',message:'Socket connected, emitting room:create-bots',data:{roomId,name,botMode:selectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                     // #endregion
                     console.log("Socket connected, emitting room:create-bots");
                     s.emit("room:create-bots", { roomId, name, botMode: selectedBotMode }, handleResponse);
                   });
                 } else {
                   // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:845',message:'Socket already connected, emitting room:create-bots',data:{roomId,name,botMode:selectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:923',message:'Socket already connected, emitting room:create-bots',data:{roomId,name,botMode:selectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                   // #endregion
                   console.log("Socket already connected, emitting room:create-bots");
                   s.emit("room:create-bots", { roomId, name, botMode: selectedBotMode }, handleResponse);
@@ -1207,6 +1194,9 @@ function useAudioManager() {
       glassClink: glassClinkSound,
       beerOpen: beerOpenSound,
       pivoOpen: pivoOpenSound,
+      doubleKill: doubleKillSound,
+      tripleKill: tripleKillSound,
+      zinga: zingaSound,
     };
     
     // Kreiraj audio instance SINHRONO
@@ -1274,6 +1264,8 @@ function useAudioManager() {
         glassClink: glassClinkSound,
         beerOpen: beerOpenSound,
         pivoOpen: pivoOpenSound,
+        doubleKill: doubleKillSound,
+        zinga: zingaSound,
       };
       
       // #region agent log
@@ -1534,6 +1526,7 @@ function Game({ state, playerId, socket }) {
   const [glassShakePlayerId, setGlassShakePlayerId] = useState(null);
   const [ghostCard, setGhostCard] = useState(null); // {card, id} - last taken card ghost
   const [lastCardTransition, setLastCardTransition] = useState(null); // {card, fromSeat, id} kad je poslednja karta u spil
+  const zingaStreakRef = useRef(0); // Track consecutive zinga count (0, 1, 2, 3+)
   
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
@@ -1588,6 +1581,9 @@ function Game({ state, playerId, socket }) {
     // Start dealing
     setIsDealing(true);
     setHandRevealCount(0);
+    
+    // Reset zinga streak tracking when a new hand starts
+    zingaStreakRef.current = 0;
 
     // Play card dealing sound when cards are dealt in a new hand
     playSound('cardDeal');
@@ -1715,10 +1711,34 @@ function Game({ state, playerId, socket }) {
       const ghostTimeout = setTimeout(() => setGhostCard(null), 1500);
       
       // Zinga FX (check before setting cleanup)
-      if (a.zinga === 10) {
-        setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
-      } else if (a.zinga === 20) {
-        setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ZANDARA! +20", subtitle: a.playerName });
+      if (a.zinga === 10 || a.zinga === 20) {
+        // Increment streak
+        zingaStreakRef.current += 1;
+        const streak = zingaStreakRef.current;
+        
+        if (streak === 3) {
+          // Triple kill! Play triple kill sound and zinga sound three times
+          playSound('tripleKill', 0.6);
+          playSound('zinga', 0.6);
+          setTimeout(() => playSound('zinga', 0.6), 100);
+          setTimeout(() => playSound('zinga', 0.6), 200);
+        } else if (streak === 2) {
+          // Double kill! Play both sounds simultaneously
+          playSound('zinga', 0.6);
+          playSound('doubleKill', 0.6);
+        } else {
+          // Regular zinga - play zinga sound
+          playSound('zinga', 0.6);
+        }
+        
+        if (a.zinga === 10) {
+          setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
+        } else if (a.zinga === 20) {
+          setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ZANDARA! +20", subtitle: a.playerName });
+        }
+      } else {
+        // Not a zinga, reset streak
+        zingaStreakRef.current = 0;
       }
       
       return () => clearTimeout(ghostTimeout);
@@ -1727,10 +1747,34 @@ function Game({ state, playerId, socket }) {
       setGhostCard(null);
       
       // Zinga FX
-      if (a.zinga === 10) {
-        setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
-      } else if (a.zinga === 20) {
-        setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ZANDARA! +20", subtitle: a.playerName });
+      if (a.zinga === 10 || a.zinga === 20) {
+        // Increment streak
+        zingaStreakRef.current += 1;
+        const streak = zingaStreakRef.current;
+        
+        if (streak === 3) {
+          // Triple kill! Play triple kill sound and zinga sound three times
+          playSound('tripleKill', 0.6);
+          playSound('zinga', 0.6);
+          setTimeout(() => playSound('zinga', 0.6), 100);
+          setTimeout(() => playSound('zinga', 0.6), 200);
+        } else if (streak === 2) {
+          // Double kill! Play both sounds simultaneously
+          playSound('zinga', 0.6);
+          playSound('doubleKill', 0.6);
+        } else {
+          // Regular zinga - play zinga sound
+          playSound('zinga', 0.6);
+        }
+        
+        if (a.zinga === 10) {
+          setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
+        } else if (a.zinga === 20) {
+          setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ZANDARA! +20", subtitle: a.playerName });
+        }
+      } else {
+        // Not a zinga, reset streak
+        zingaStreakRef.current = 0;
       }
     }
   }, [g?.lastAction?.id, mySeat]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -2444,6 +2488,12 @@ export default function App() {
 
   const [playerId, setPlayerId] = useState("");
   const [state, setState] = useState(null);
+  
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2431',message:'Joining state changed',data:{joining,name:name.trim(),selectedBotMode},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+  }, [joining]);
+  // #endregion
 
   useEffect(() => {
     // Cleanup on unmount
@@ -2480,7 +2530,7 @@ export default function App() {
     
     s.on("state", (next) => {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2283',message:'State event received',data:{phase:next?.phase,roomId:next?.roomId,hasGame:!!next?.game,playersCount:next?.players?.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2481',message:'State event received',data:{phase:next?.phase,roomId:next?.roomId,hasGame:!!next?.game,playersCount:next?.players?.length,currentPlayerId:playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
       // #endregion
       
       console.log("Received state event:", next?.phase, next?.roomId);
@@ -2488,18 +2538,21 @@ export default function App() {
         // Validate state before setting
         if (next.phase === "playing" && !next.game) {
           // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2287',message:'Invalid state: playing without game',data:{phase:next.phase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2489',message:'Invalid state: playing without game',data:{phase:next.phase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
           // #endregion
           console.error("Received state with phase='playing' but game is null!");
           setError("Greska: Igra nije spremna. Cekam podatke od servera...");
           return;
         }
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2292',message:'Setting state',data:{phase:next.phase,playersCount:next.players?.length,hasGame:!!next.game},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2498',message:'Setting state',data:{phase:next.phase,playersCount:next?.players?.length,hasGame:!!next.game,currentPlayerId:playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
         // #endregion
         console.log("Setting state:", next.phase, "players:", next.players?.length);
         setState(next);
         setError(""); // Clear any previous errors
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:2502',message:'State set successfully',data:{phase:next.phase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
       }
     });
     s.on("connect", () => {
