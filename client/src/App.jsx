@@ -482,11 +482,23 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
   const rv = rightVec[ownerRel];
   const cv = toCenter[ownerRel];
 
-  // Pozicija levo od igrača: koristi negativan rightVec da pomera levo
-  const pos = {
-    left: `${b.x + cv.x * 10 - rv.x * 10}%`,
-    top: `${b.y + cv.y * 10 - rv.y * 10}%`
-  };
+  // Pozicija relativno u odnosu na igrača koji poseduje spil:
+  // - Ako je sa leve ili desne strane (ownerRel === 1 ili 3): iznad imena igrača
+  // - Ako je gore (ownerRel === 2): sa leve strane imena igrača
+  let pos;
+  if (ownerRel === 1) {
+    // Left: iznad imena (left-4 je na left-4, ime je na top-1/2, spil treba da bude iznad na ~38%)
+    pos = { left: "4%", top: "38%" };
+  } else if (ownerRel === 3) {
+    // Right: iznad imena (right-4 je na right-4, ime je na top-1/2, spil treba da bude iznad na ~38%)
+    pos = { left: "96%", top: "38%" };
+  } else if (ownerRel === 2) {
+    // Top: sa leve strane imena (ime je centrirano gore na top-4 left-1/2, spil levo od centra na ~38%)
+    pos = { left: "38%", top: "4%" };
+  } else {
+    // Fallback: centar stola
+    pos = { left: "50%", top: "20%" };
+  }
 
   // Smanjena visina deck-a: manje layera i manji offset
   const layers = clamp(Math.ceil((deckCount || 0) / 20), 1, 4);
@@ -499,35 +511,59 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
         style={{
           left: 0,
           top: 0,
-          transform: `translate(${i * 2}px, ${-i * 1.5}px) rotate(${i * 1.5 - 2}deg)`,
+          transform: `translate(${i * 1}px, ${-i * 0.75}px) rotate(${i * 0.75 - 1}deg)`,
           zIndex: i
         }}
       >
-        <CardBack compact={false} />
+        <CardBack compact={true} />
       </div>
     );
   }
 
-  // Use compact size for deck to match peek card
-  const deckSize = isMobile ? "w-10 h-14" : "w-16 h-24";
+  // Duplo manja veličina: w-8 h-12 (bilo w-16 h-24)
+  const deckSize = "w-8 h-12";
   
+  // Određujemo transform origin i offset u zavisnosti od pozicije
+  let transformOrigin, translateOffset;
+  if (ownerRel === 1 || ownerRel === 3) {
+    // Za left/right: rotacija oko donje ivice, pomereno gore da viri iz stola
+    transformOrigin = "center bottom";
+    translateOffset = "translate(-50%, -16px)";
+  } else if (ownerRel === 2) {
+    // Za top: rotacija oko desne ivice, pomereno levo da viri iz stola
+    transformOrigin = "right center";
+    translateOffset = "translate(16px, -50%)";
+  } else {
+    // Fallback
+    transformOrigin = "center bottom";
+    translateOffset = "translate(-50%, -24px)";
+  }
+
   return (
-    <div className="absolute pointer-events-none" style={{ ...pos, transform: "translate(-50%, -50%)" }}>
+    <div 
+      className="absolute pointer-events-none" 
+      style={{ 
+        left: pos.left,
+        top: pos.top,
+        transform: `${translateOffset} rotate(90deg)`,
+        transformOrigin: transformOrigin
+      }}
+    >
       <div className={`relative ${deckSize}`}>
         {backLayers}
 
-        {/* Peek card (last card of deck) - ispod spila i viri */}
+        {/* Peek card (last card of deck) - viri iz stola, rotirana za 90 stepeni */}
         {deckPeekCard ? (
           <div
             className="absolute left-1/2 top-full"
             style={{
-              transform: "translate(-50%, -12px) rotate(6deg)",
+              transform: "translate(-50%, -4px) rotate(6deg)",
               zIndex: 10
             }}
           >
-            {/* Clip so it looks like it is peeking out from bottom - samo gornji deo karte se vidi */}
-            <div className="overflow-hidden h-[96px]" style={{ clipPath: "inset(0 0 50% 0)" }}>
-              <Card card={deckPeekCard} compact={false} />
+            {/* Clip so it looks like it is peeking out from table - samo gornji deo karte se vidi */}
+            <div className="overflow-hidden h-[24px]" style={{ clipPath: "inset(0 0 65% 0)" }}>
+              <Card card={deckPeekCard} compact={true} />
             </div>
           </div>
         ) : null}
@@ -1839,12 +1875,12 @@ function Game({ state, playerId, socket }) {
         <div 
           className="fixed inset-0 -z-10"
           style={{
-            backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url(${imgWoodenBackground})`,
+            backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4)), url(${imgWoodenBackground})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundAttachment: 'fixed',
-            filter: 'blur(12px)',
-            transform: 'scale(1.1)'
+            filter: 'blur(3px)',
+            transform: 'scale(1.05)'
           }}
         />
       )}
@@ -2203,14 +2239,14 @@ function Game({ state, playerId, socket }) {
               <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[min(820px,92%)]">
                 {/* Wooden shelf background */}
                 <div 
-                  className="wooden-shelf rounded-t-3xl pt-4 pb-4 px-4"
+                  className="wooden-shelf rounded-t-3xl pt-2 pb-2 px-3"
                   style={imgWoodenDesk ? {
                     backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.5)), url(${imgWoodenDesk})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center top'
                   } : {}}
                 >
-                  <div className="flex items-end justify-between mb-2">
+                  <div className="flex items-end justify-between mb-1">
                     <div>
                       {byRel[0]?.id && bubbles[byRel[0].id]?.text ? (
                         <div className={`mb-2 inline-block rounded-2xl bg-black/55 ring-1 ring-white/10 px-3 py-1 text-white/90 animate-chat-fade-out ${
@@ -2221,8 +2257,8 @@ function Game({ state, playerId, socket }) {
                           {bubbles[byRel[0].id].text}
                         </div>
                       ) : null}
-                      <div className="text-white/90 font-semibold">{byRel[0]?.name || "Vi"}</div>
-                      <div className="text-xs text-white/70 mt-0.5">
+                      <div className="text-white/90 font-semibold text-sm">{byRel[0]?.name || "Vi"}</div>
+                      <div className="text-[10px] text-white/70 mt-0.5">
                         Karte: {myHand.length}
                       </div>
                     </div>
@@ -2230,18 +2266,18 @@ function Game({ state, playerId, socket }) {
                     <button
                       type="button"
                       onClick={() => setShowCaptured(true)}
-                      className="group flex items-center gap-2 rounded-xl bg-black/20 ring-1 ring-white/10 px-3 py-2 text-xs text-white/80 hover:bg-black/30 transition"
+                      className="group flex items-center gap-1.5 rounded-lg bg-black/20 ring-1 ring-white/10 px-2 py-1.5 text-[10px] text-white/80 hover:bg-black/30 transition"
                       title="Prika?i no?ene karte"
                     >
-                      <div className="relative">
-                        {myCapturedTop ? <Card card={myCapturedTop} compact={isMobile} /> : <CardBack compact={isMobile} />}
-                        <div className="absolute -right-2 -bottom-2 rounded-full bg-emerald-500 text-black text-[10px] font-semibold px-2 py-0.5 ring-1 ring-black/20">
+                      <div className="relative scale-75">
+                        {myCapturedTop ? <Card card={myCapturedTop} compact={true} /> : <CardBack compact={true} />}
+                        <div className="absolute -right-1.5 -bottom-1.5 rounded-full bg-emerald-500 text-black text-[8px] font-semibold px-1.5 py-0.5 ring-1 ring-black/20">
                           {myCapturedCount}
                         </div>
                       </div>
                       <div className="text-left">
-                        <div className="font-semibold leading-tight">Nase karte</div>
-                        <div className="text-white/60 leading-tight">klik za pregled</div>
+                        <div className="font-semibold leading-tight text-[10px]">Nase karte</div>
+                        <div className="text-white/60 leading-tight text-[9px]">klik za pregled</div>
                       </div>
                     </button>
 
@@ -2249,7 +2285,7 @@ function Game({ state, playerId, socket }) {
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 justify-center">
+                <div className="flex flex-wrap gap-1.5 justify-center">
                   {myHand.slice(0, clamp(handRevealCount, 0, myHand.length)).map((c) => (
                     <Card
                       key={c.id}
@@ -2257,11 +2293,12 @@ function Game({ state, playerId, socket }) {
                       onClick={() => playCard(c)}
                       disabled={!isMyTurn || state.phase !== "playing" || isDealing}
                       showPoints={false}
+                      compact={true}
                     />
                   ))}
                   {Array.from({ length: Math.max(0, Math.max(myHand.length, 4) - clamp(handRevealCount, 0, myHand.length)) }).map((_, i) => (
                     <div key={`back-${i}`} className="pointer-events-none">
-                      <CardBack compact={false} />
+                      <CardBack compact={true} />
                     </div>
                   ))}
                 </div>
@@ -2333,10 +2370,10 @@ function Game({ state, playerId, socket }) {
             </div>
 
             <div className="mt-4 grid grid-cols-2 gap-3 text-xs text-white/70">
-              <div className="rounded-2xl bg-black/20 ring-1 ring-white/10 p-3">
-                <div className="text-white/60">Spil</div>
-                <div className="mt-1 font-semibold text-white">{g?.deckCount ?? 0}</div>
-                {g?.deckCount === 0 ? <div className="mt-1 text-[11px] text-red-200 font-semibold">Poslednje deljenje</div> : null}
+              <div className="rounded-2xl bg-black/20 ring-1 ring-white/10 p-2">
+                <div className="text-white/60 text-xs">Spil</div>
+                <div className="mt-0.5 font-semibold text-white text-sm">{g?.deckCount ?? 0}</div>
+                {g?.deckCount === 0 ? <div className="mt-0.5 text-[10px] text-red-200 font-semibold">Poslednje deljenje</div> : null}
               </div>
               <div className="rounded-2xl bg-black/20 ring-1 ring-white/10 p-3">
                 <div className="text-white/60">Runda</div>
