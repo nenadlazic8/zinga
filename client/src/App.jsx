@@ -463,20 +463,26 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
   const ownerRel = relativePos(mySeat, deckOwnerSeat ?? 0);
 
   // Pozicija relativno u odnosu na igrača koji poseduje spil:
-  // Fiksirano dole, ispod imena igrača - horizontalna pozicija zavisi od igrača, vertikalna je uvek dole
+  // Tačno kod imena igrača - pozicionirano precizno ispod/imena
+  // Ime igrača: text-sm font-semibold + text-xs za karte + možda "Na potezu" = ~60px visine
   let pos;
   if (ownerRel === 1) {
-    // Left: levo dole
-    pos = { left: "4%", bottom: "20px" };
+    // Left: ime je na left-4 top-1/2 -translate-y-1/2 (left: 1rem = 16px, top: 50%)
+    // Deck treba da bude ispod imena, malo desno od centra imena
+    pos = { left: "calc(1rem + 16px)", top: "calc(50% + 40px)", transform: "translate(0, 0)" };
   } else if (ownerRel === 3) {
-    // Right: desno dole
-    pos = { left: "96%", bottom: "20px" };
+    // Right: ime je na right-4 top-1/2 -translate-y-1/2 (right: 1rem = 16px, top: 50%)
+    // Deck treba da bude ispod imena, malo levo od centra imena
+    pos = { right: "calc(1rem + 16px)", top: "calc(50% + 40px)", transform: "translate(0, 0)" };
   } else if (ownerRel === 2) {
-    // Top: centar dole (jer je gore, ali deck mora biti dole)
-    pos = { left: "50%", bottom: "20px" };
+    // Top: ime je na top-4 left-1/2 -translate-x-1/2 (top: 1rem = 16px, left: 50%)
+    // Deck treba da bude ispod imena, centrirano
+    pos = { left: "50%", top: "calc(1rem + 60px)", transform: "translate(-50%, 0)" };
   } else {
-    // Bottom (moj deck): centar dole
-    pos = { left: "50%", bottom: "20px" };
+    // Bottom (moj deck): ime je u wooden-shelf na dnu
+    // Deck treba da bude iznad wooden-shelf-a, centrirano
+    // Wooden shelf je na bottom-0, ime je unutar njega, deck treba da bude iznad
+    pos = { left: "50%", bottom: "calc(120px + 8px)", transform: "translate(-50%, 0)" };
   }
 
   // Smanjena visina deck-a: manje layera i manji offset
@@ -506,9 +512,11 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
     <div 
       className="absolute pointer-events-none" 
       style={{ 
-        left: pos.left,
-        bottom: pos.bottom,
-        transform: "translate(-50%, 0)",
+        ...(pos.left !== undefined ? { left: pos.left } : {}),
+        ...(pos.right !== undefined ? { right: pos.right } : {}),
+        ...(pos.top !== undefined ? { top: pos.top } : {}),
+        ...(pos.bottom !== undefined ? { bottom: pos.bottom } : {}),
+        transform: pos.transform || "translate(-50%, 0)",
         transformOrigin: "center bottom"
       }}
     >
@@ -531,15 +539,24 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard }) {
           {backLayers}
         </div>
         
-        {/* Ako je kod mene, ispisati koja je karta */}
+        {/* Prikaz karte - kada je deck kod mene (ownerRel === 0), prikaži celu kartu i tekst */}
         {ownerRel === 0 && deckPeekCard ? (
-          <div className="absolute left-1/2 top-full mt-1 text-xs text-white/90 font-semibold whitespace-nowrap pointer-events-auto" style={{ transform: "translate(-50%, 0)" }}>
-            {deckPeekCard.suit === "hearts" && "♥"}
-            {deckPeekCard.suit === "diamonds" && "♦"}
-            {deckPeekCard.suit === "clubs" && "♣"}
-            {deckPeekCard.suit === "spades" && "♠"}
-            {" "}
-            {deckPeekCard.rank === "A" ? "A" : deckPeekCard.rank === "K" ? "K" : deckPeekCard.rank === "Q" ? "Q" : deckPeekCard.rank === "J" ? "J" : deckPeekCard.rank}
+          <div className="absolute left-1/2 top-full mt-2 pointer-events-auto z-20" style={{ transform: "translate(-50%, 0)" }}>
+            {/* Prikaži celu kartu */}
+            <div className="mb-2 flex justify-center">
+              <Card card={deckPeekCard} compact={false} />
+            </div>
+            {/* Tekstualni prikaz karte */}
+            <div className="text-center">
+              <div className="text-base text-white font-bold whitespace-nowrap bg-black/60 px-3 py-1.5 rounded-lg ring-2 ring-white/30">
+                {deckPeekCard.suit === "hearts" && "♥"}
+                {deckPeekCard.suit === "diamonds" && "♦"}
+                {deckPeekCard.suit === "clubs" && "♣"}
+                {deckPeekCard.suit === "spades" && "♠"}
+                {" "}
+                {deckPeekCard.rank === "A" ? "A" : deckPeekCard.rank === "K" ? "K" : deckPeekCard.rank === "Q" ? "Q" : deckPeekCard.rank === "J" ? "J" : deckPeekCard.rank}
+              </div>
+            </div>
           </div>
         ) : null}
       </div>
@@ -1199,27 +1216,31 @@ function useAudioManager() {
       zinga: zingaSound,
     };
     
-    // Kreiraj audio instance SINHRONO
+    // Kreiraj audio instance SINHRONO (bez reprodukcije - samo za unlock)
     Object.keys(sounds).forEach((key) => {
       try {
         const audio = new Audio(sounds[key]);
         audio.preload = 'auto';
-        audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
+        audio.volume = 0; // Set volume to 0 to prevent any sound from playing during unlock
         audioInstancesRef.current[key] = audio;
         
-        // Pokušaj unlock direktno
+        // Pokušaj unlock direktno sa volume 0 (neće se čuti)
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
               audio.pause();
               audio.currentTime = 0;
+              // Restore original volume after unlock
+              audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
               // #region agent log
               console.log(`[AUDIO] Unlocked ${key}`);
               fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1070',message:'Direct unlock success',data:{soundKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
               // #endregion
             })
             .catch((err) => {
+              // Restore original volume even on error
+              audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
               // #region agent log
               console.log(`[AUDIO] Unlock failed ${key}:`, err);
               fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1075',message:'Direct unlock failed',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
@@ -1265,6 +1286,7 @@ function useAudioManager() {
         beerOpen: beerOpenSound,
         pivoOpen: pivoOpenSound,
         doubleKill: doubleKillSound,
+        tripleKill: tripleKillSound,
         zinga: zingaSound,
       };
       
@@ -1281,7 +1303,7 @@ function useAudioManager() {
           
           const audio = new Audio(sounds[key]);
           audio.preload = 'auto';
-          audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
+          audio.volume = 0; // Set volume to 0 to prevent any sound from playing during unlock
           audioInstancesRef.current[key] = audio;
           
           // #region agent log
@@ -1299,14 +1321,20 @@ function useAudioManager() {
                 // #endregion
                 audio.pause();
                 audio.currentTime = 0;
+                // Restore original volume after unlock
+                audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
               })
               .catch((err) => {
+                // Restore original volume even on error
+                audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
                 // #region agent log
                 fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1087',message:'Audio unlock failed',data:{soundKey:key,error:err?.message||String(err),name:err?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
                 // #endregion
                 // Ignore - audio će biti unlocked na prvom pravom play-u
               });
           } else {
+            // Restore original volume if play returned undefined
+            audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
             // #region agent log
             fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1090',message:'Audio play returned undefined',data:{soundKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
             // #endregion
@@ -1666,7 +1694,11 @@ function Game({ state, playerId, socket }) {
   // Animate last played card + show Zinga / last-deal FX
   useEffect(() => {
     const a = g?.lastAction;
-    if (!a?.id || !a?.card) return;
+    if (!a?.id || !a?.card) {
+      // Reset streak when there's no action
+      zingaStreakRef.current = 0;
+      return;
+    }
 
     const rel = relativePos(mySeat, a.fromSeat);
     const seed = Number(a.id) || 1;
@@ -1711,11 +1743,13 @@ function Game({ state, playerId, socket }) {
       const ghostTimeout = setTimeout(() => setGhostCard(null), 1500);
       
       // Zinga FX (check before setting cleanup)
+      // IMPORTANT: Only process zinga if this action actually has zinga property set
       if (a.zinga === 10 || a.zinga === 20) {
-        // Increment streak
+        // Increment streak ONLY if this is actually a zinga
         zingaStreakRef.current += 1;
         const streak = zingaStreakRef.current;
         
+        // Only play double/triple kill sounds if streak matches exactly
         if (streak === 3) {
           // Triple kill! Play triple kill sound and zinga sound three times
           playSound('tripleKill', 0.6);
@@ -1726,10 +1760,11 @@ function Game({ state, playerId, socket }) {
           // Double kill! Play both sounds simultaneously
           playSound('zinga', 0.6);
           playSound('doubleKill', 0.6);
-        } else {
-          // Regular zinga - play zinga sound
+        } else if (streak === 1) {
+          // Regular zinga - play zinga sound only
           playSound('zinga', 0.6);
         }
+        // If streak > 3, don't play any special sounds (just continue counting)
         
         if (a.zinga === 10) {
           setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
@@ -1737,7 +1772,7 @@ function Game({ state, playerId, socket }) {
           setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ZANDARA! +20", subtitle: a.playerName });
         }
       } else {
-        // Not a zinga, reset streak
+        // Not a zinga, reset streak immediately
         zingaStreakRef.current = 0;
       }
       
@@ -1747,11 +1782,13 @@ function Game({ state, playerId, socket }) {
       setGhostCard(null);
       
       // Zinga FX
+      // IMPORTANT: Only process zinga if this action actually has zinga property set
       if (a.zinga === 10 || a.zinga === 20) {
-        // Increment streak
+        // Increment streak ONLY if this is actually a zinga
         zingaStreakRef.current += 1;
         const streak = zingaStreakRef.current;
         
+        // Only play double/triple kill sounds if streak matches exactly
         if (streak === 3) {
           // Triple kill! Play triple kill sound and zinga sound three times
           playSound('tripleKill', 0.6);
@@ -1762,10 +1799,11 @@ function Game({ state, playerId, socket }) {
           // Double kill! Play both sounds simultaneously
           playSound('zinga', 0.6);
           playSound('doubleKill', 0.6);
-        } else {
-          // Regular zinga - play zinga sound
+        } else if (streak === 1) {
+          // Regular zinga - play zinga sound only
           playSound('zinga', 0.6);
         }
+        // If streak > 3, don't play any special sounds (just continue counting)
         
         if (a.zinga === 10) {
           setFx({ id: a.id, kind: "zinga", title: "ZINGA! +10", subtitle: a.playerName });
@@ -1773,11 +1811,27 @@ function Game({ state, playerId, socket }) {
           setFx({ id: a.id, kind: "zinga", title: "ZINGA NA ZANDARA! +20", subtitle: a.playerName });
         }
       } else {
-        // Not a zinga, reset streak
+        // Not a zinga, reset streak immediately
         zingaStreakRef.current = 0;
       }
     }
   }, [g?.lastAction?.id, mySeat]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Reset zinga streak when phase changes or game restarts
+  useEffect(() => {
+    if (state.phase !== "playing") {
+      zingaStreakRef.current = 0;
+    }
+  }, [state.phase]);
+
+  // Reset zinga streak when action changes and new action is not a zinga
+  useEffect(() => {
+    const a = g?.lastAction;
+    if (a && a.zinga !== 10 && a.zinga !== 20) {
+      // New action is not a zinga, reset streak
+      zingaStreakRef.current = 0;
+    }
+  }, [g?.lastAction?.id]);
 
   // (removed) old lastDeal/round FX hooks; now driven by server deal event
 
