@@ -1080,6 +1080,11 @@ io.on("connection", (socket) => {
 
   socket.on("player:props", ({ drink, glass, cigarette }, ack) => {
     try {
+      // #region agent log
+      const logData = {location:'index.js:1010',message:'player:props received',data:{roomId:socket.data.roomId,playerId:socket.data.playerId,drink,glass,cigarette},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+      // #endregion
+      
       const roomId = socket.data.roomId;
       const playerId = socket.data.playerId;
       if (!roomId || !playerId) throw new Error("Niste u sobi.");
@@ -1096,13 +1101,33 @@ io.on("connection", (socket) => {
       const allowedCigarettes = new Set(["cigareta", "sobranje", null]);
       if (!allowedCigarettes.has(cig)) throw new Error("Nepoznata opcija cigareta.");
 
+      // #region agent log
+      const logDataBefore = {location:'index.js:1027',message:'player:props before update',data:{roomId,playerId,playerName:p.name,oldDrink:p.drink,newDrink:d,oldGlass:p.glass,newGlass:Boolean(glass),oldCigarette:p.cigarette,newCigarette:cig},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logDataBefore) + '\n'); } catch {}
+      // #endregion
+
       p.drink = d;
       p.glass = Boolean(glass);
       p.cigarette = cig;
 
+      // #region agent log
+      const logDataAfter = {location:'index.js:1035',message:'player:props after update',data:{roomId,playerId,playerName:p.name,drink:p.drink,glass:p.glass,cigarette:p.cigarette,playersInRoom:room.players.map(pl=>({id:pl.id,name:pl.name,drink:pl.drink}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logDataAfter) + '\n'); } catch {}
+      // #endregion
+
       broadcastRoom(room);
+      
+      // #region agent log
+      const logDataBroadcast = {location:'index.js:1042',message:'player:props broadcast sent',data:{roomId,playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logDataBroadcast) + '\n'); } catch {}
+      // #endregion
+      
       ack?.({ ok: true });
     } catch (e) {
+      // #region agent log
+      const logDataError = {location:'index.js:1047',message:'player:props error',data:{error:e?.message||String(e),roomId:socket.data.roomId,playerId:socket.data.playerId},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logDataError) + '\n'); } catch {}
+      // #endregion
       ack?.({ ok: false, error: e?.message || "Greška." });
     }
   });

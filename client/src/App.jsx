@@ -503,14 +503,14 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard, players, is
       }}
     >
       <div className={`relative ${deckSize}`}>
-        {/* Peek card (last card of deck) - preko spila, bukvalno preko njega */}
+        {/* Peek card (last card of deck) - bukvalno preko spila */}
         {deckPeekCard ? (
           <div
             className="absolute left-1/2 bottom-full"
             style={{
               transform: "translate(-50%, 0)",
               zIndex: 15,
-              marginBottom: "-2px" // Minimalni offset da bude direktno preko spila
+              marginBottom: "0px" // Bukvalno preko spila, bez offseta
             }}
           >
             <Card card={deckPeekCard} compact={true} />
@@ -518,14 +518,23 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard, players, is
         ) : null}
         
         {/* Deck layers - malo se vidi ispod karte */}
-        <div className="relative" style={{ zIndex: 5, marginTop: deckPeekCard ? "-2px" : "0" }}>
+        <div className="relative" style={{ zIndex: 5, marginTop: deckPeekCard ? "0px" : "0" }}>
           {backLayers}
         </div>
         
-        {/* Tekst "Secena ide kod [ime]" - ispod deck-a, samo u poslednjoj ruci */}
-        {isLastHand && deckPeekCard && deckOwnerName ? (
-          <div className="absolute left-1/2 top-full mt-2 pointer-events-auto z-20" style={{ transform: "translate(-50%, 0)" }}>
-            <div className="text-xs text-white/90 font-semibold whitespace-nowrap bg-black/60 px-2 py-1 rounded">
+        {/* Tekst "Secena ide kod [ime]" - ispod deck-a, uvek kada postoji secena karta */}
+        {deckPeekCard && deckOwnerName ? (
+          <div 
+            className="absolute left-1/2 top-full mt-1 pointer-events-auto z-20" 
+            style={{ 
+              transform: "translate(-50%, 0)",
+              maxWidth: "180px",
+              width: "max-content",
+              left: "50%",
+              right: "auto"
+            }}
+          >
+            <div className="text-xs text-white/90 font-semibold bg-black/60 px-2 py-1 rounded text-center whitespace-nowrap overflow-hidden text-ellipsis">
               Secena ide kod {deckOwnerName}
             </div>
           </div>
@@ -538,6 +547,10 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard, players, is
 // (removed) TableDecor: props are now user-selected via "Uzmi pi?e"
 
 function PlayerPropsLayer({ mySeat, players, glassShakePlayerId }) {
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:540',message:'PlayerPropsLayer render',data:{mySeat,playersCount:players?.length,players:players?.map(p=>({id:p.id,name:p.name,drink:p.drink,glass:p.glass,cigarette:p.cigarette}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+  
   // Deterministic jitter so all clients see same placements
   function hashString(s) {
     let h = 2166136261;
@@ -584,6 +597,12 @@ function PlayerPropsLayer({ mySeat, players, glassShakePlayerId }) {
     const hasGlass = Boolean(p.glass);
     const hasCig = p.cigarette && p.cigarette !== null;
     const shouldShakeGlass = glassShakePlayerId === p.id && hasGlass;
+
+    // #region agent log
+    if (drink) {
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:583',message:'Rendering drink for player',data:{playerId:p.id,playerName:p.name,drink,mySeat,playerSeat:p.seat,rel},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    }
+    // #endregion
 
     const drinkPos = drink ? { x: b.x + rv.x * 15 + dx, y: b.y + rv.y * 15 + dy } : null;
 
@@ -1391,12 +1410,16 @@ function useAudioManager() {
 
   const playSound = useCallback((soundKey, volumeOverride = null) => {
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1122',message:'playSound called',data:{soundKey,audioEnabled:audioEnabledRef.current,hasInstance:!!audioInstancesRef.current[soundKey],allInstances:Object.keys(audioInstancesRef.current)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    const callStack = new Error().stack?.split('\n').slice(0, 8).join('|') || 'no stack';
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1409',message:'playSound called',data:{soundKey,audioEnabled:audioEnabledRef.current,hasInstance:!!audioInstancesRef.current[soundKey],allInstances:Object.keys(audioInstancesRef.current),callStack},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
     
-    // Always try to enable audio if not already enabled
+    // Only play sound if audio is enabled (user has interacted)
     if (!audioEnabledRef.current) {
-      audioEnabledRef.current = true;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1416',message:'playSound skipped - audio not enabled',data:{soundKey},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      return; // Don't play sound if audio is not enabled
     }
 
     try {
@@ -1964,6 +1987,12 @@ function Game({ state, playerId, socket }) {
     }
   }, [fx?.id, fx?.kind]);
 
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1990',message:'GameBoard render - checking background',data:{hasImgWoodenBackground:!!imgWoodenBackground,imgWoodenBackgroundType:typeof imgWoodenBackground,imgWoodenBackgroundValue:imgWoodenBackground?.substring?.(0,100)||String(imgWoodenBackground)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  }, [imgWoodenBackground]);
+  // #endregion
+
   return (
     <div 
       className={`min-h-screen p-4 relative ${screenShake ? 'animate-shake-screen' : ''}`}
@@ -1977,12 +2006,14 @@ function Game({ state, playerId, socket }) {
         <div 
           className="fixed inset-0 -z-10"
           style={{
-            backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.4)), url(${imgWoodenBackground})`,
+            backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.2)), url(${imgWoodenBackground})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            backgroundAttachment: 'fixed',
-            filter: 'blur(3px)',
-            transform: 'scale(1.05)'
+            backgroundRepeat: 'no-repeat',
+            filter: 'none', // Uklonjen blur da se vidi drvena tekstura
+            transform: 'none', // Uklonjen scale da se vidi cela slika
+            zIndex: -1,
+            opacity: 1
           }}
         />
       )}
