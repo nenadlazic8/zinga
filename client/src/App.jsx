@@ -503,26 +503,26 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard, players, is
       }}
     >
       <div className={`relative ${deckSize}`}>
-        {/* Peek card (last card of deck) - bukvalno preko spila */}
+        {/* Deck layers - prvo renderuj spil */}
+        <div className="relative" style={{ zIndex: 5 }}>
+          {backLayers}
+        </div>
+        
+        {/* Peek card (last card of deck) - bukvalno preko spila, centrirano */}
         {deckPeekCard ? (
           <div
-            className="absolute left-1/2 bottom-full"
+            className="absolute left-1/2 top-1/2"
             style={{
-              transform: "translate(-50%, 0)",
-              zIndex: 15,
-              marginBottom: "0px" // Bukvalno preko spila, bez offseta
+              transform: "translate(-50%, -50%)",
+              zIndex: 20, // Viši z-index da bude preko spila
+              filter: "drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))" // Dodaj senku za bolju vidljivost
             }}
           >
             <Card card={deckPeekCard} compact={true} />
           </div>
         ) : null}
         
-        {/* Deck layers - malo se vidi ispod karte */}
-        <div className="relative" style={{ zIndex: 5, marginTop: deckPeekCard ? "0px" : "0" }}>
-          {backLayers}
-        </div>
-        
-        {/* Tekst "Secena ide kod [ime]" - ispod deck-a, uvek kada postoji secena karta */}
+        {/* Tekst "Ide kod [ime]" - ispod deck-a, uvek kada postoji secena karta */}
         {deckPeekCard && deckOwnerName ? (
           <div 
             className="absolute left-1/2 top-full mt-1 pointer-events-auto z-20" 
@@ -535,7 +535,7 @@ function DeckStack({ mySeat, deckOwnerSeat, deckCount, deckPeekCard, players, is
             }}
           >
             <div className="text-xs text-white/90 font-semibold bg-black/60 px-2 py-1 rounded text-center whitespace-nowrap overflow-hidden text-ellipsis">
-              Secena ide kod {deckOwnerName}
+              Ide kod {deckOwnerName}
             </div>
           </div>
         ) : null}
