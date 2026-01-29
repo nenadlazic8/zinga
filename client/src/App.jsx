@@ -2003,19 +2003,27 @@ function Game({ state, playerId, socket }) {
       }}
     >
       {imgWoodenBackground && (
-        <div 
-          className="fixed inset-0 -z-10"
-          style={{
-            backgroundImage: `linear-gradient(180deg, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.2)), url(${imgWoodenBackground})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat',
-            filter: 'none', // Uklonjen blur da se vidi drvena tekstura
-            transform: 'none', // Uklonjen scale da se vidi cela slika
-            zIndex: -1,
-            opacity: 1
-          }}
-        />
+        <>
+          {/* Drvena pozadinska slika */}
+          <div 
+            className="fixed inset-0 -z-10"
+            style={{
+              backgroundImage: `url(${imgWoodenBackground})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              zIndex: -2
+            }}
+          />
+          {/* Crni overlay sa opacity 0.8 */}
+          <div 
+            className="fixed inset-0 -z-10"
+            style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.8)',
+              zIndex: -1
+            }}
+          />
+        </>
       )}
       <CenterFx fx={fx} />
       {showProps ? (
