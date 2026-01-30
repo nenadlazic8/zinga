@@ -426,7 +426,8 @@ function applyPlay(room, playerId, cardId) {
         g.captures.B.bonusMostCards = 0;
       }
     }
-    
+  }
+
   // Emit last action for client animations/FX FIRST (before checking for game end)
   g.lastAction = {
     id: nextActionId(room),
