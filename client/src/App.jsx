@@ -1956,6 +1956,14 @@ function Game({ state, playerId, socket }) {
   const myTeamLeadingBy15 = (myTeam === "A" && aTotal >= bTotal + 15) || (myTeam === "B" && bTotal >= aTotal + 15);
   const canSendItem = sendItemUnlocked && myTeamLeadingBy15 && !sendItemUsedPlayerIds.includes(playerId);
   const currentHand = g?.lastDeal?.hand ?? roomPlayers?.length ? 0 : null;
+  const sendItemOpponents = roomPlayers.filter((p) => p.team !== myTeam && !p.isBot);
+  // #region agent log
+  useEffect(() => {
+    if (!showSendItemPopup) return;
+    const opponents = roomPlayers.filter((p) => p.team !== myTeam && !p.isBot);
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:send-item-popup',message:'Send-item popup open',data:{roomPlayersLength:roomPlayers.length,myTeam,myPlayerId:playerId,players:roomPlayers.map(p=>({id:p.id,name:p.name,team:p.team,isBot:!!p.isBot})),opponentsLength:opponents.length,opponents:opponents.map(o=>({id:o.id,name:o.name}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  }, [showSendItemPopup]);
+  // #endregion
   useEffect(() => {
     if (!canSendItem || currentHand == null) return;
     if (sendItemPopupShownHandRef.current === currentHand) return;
@@ -2360,11 +2368,13 @@ function Game({ state, playerId, socket }) {
               <div className="text-sm font-medium text-white mb-2">Kome šalješ (protivnici koji gube):</div>
               <div className="flex flex-col gap-2">
                 {(() => {
-                  const opponents = roomPlayers.filter((p) => p.team !== myTeam && !p.isBot);
-                  if (opponents.length === 0) {
+                  // #region agent log
+                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:send-item-render',message:'Kome šalješ render',data:{opponentsLength:sendItemOpponents.length,opponents:sendItemOpponents.map(o=>({id:o.id,name:o.name,team:o.team})),branch:sendItemOpponents.length===0?'empty':'buttons'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                  // #endregion
+                  if (sendItemOpponents.length === 0) {
                     return <div className="text-sm text-white/60 py-2">Nema protivnika u sobi.</div>;
                   }
-                  return opponents.map((p) => (
+                  return sendItemOpponents.map((p) => (
                     <button
                       key={p.id}
                       type="button"
