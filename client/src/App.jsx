@@ -1718,14 +1718,33 @@ function Game({ state, playerId, socket }) {
     return () => clearTimeout(t);
   }, [state.phase, g?.lastAction?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Track last processed action ID to prevent duplicate processing
+  const lastProcessedActionIdRef = useRef(null);
+
   // Animate last played card + show Zinga / last-deal FX
   useEffect(() => {
     const a = g?.lastAction;
     if (!a?.id || !a?.card) {
       // Reset streak when there's no action
       zingaStreakRef.current = 0;
+      lastProcessedActionIdRef.current = null;
       return;
     }
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1722',message:'lastAction effect triggered',data:{actionId:a.id,actionType:a.type,hasZinga:!!a.zinga,zingaValue:a.zinga,lastProcessedId:lastProcessedActionIdRef.current,currentStreak:zingaStreakRef.current,phase:state.phase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+
+    // Skip if this action was already processed (prevents duplicate sound playback)
+    if (lastProcessedActionIdRef.current === a.id) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1735',message:'Skipping duplicate action',data:{actionId:a.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      return;
+    }
+
+    // Mark this action as processed
+    lastProcessedActionIdRef.current = a.id;
 
     const rel = relativePos(mySeat, a.fromSeat);
     const seed = Number(a.id) || 1;
@@ -1770,11 +1789,15 @@ function Game({ state, playerId, socket }) {
       const ghostTimeout = setTimeout(() => setGhostCard(null), 1500);
       
       // Zinga FX (check before setting cleanup)
-      // IMPORTANT: Only process zinga if this action actually has zinga property set
-      if (a.zinga === 10 || a.zinga === 20) {
+      // IMPORTANT: Only process zinga if this action actually has zinga property set AND we're in playing phase
+      if ((a.zinga === 10 || a.zinga === 20) && state.phase === "playing") {
         // Increment streak ONLY if this is actually a zinga
         zingaStreakRef.current += 1;
         const streak = zingaStreakRef.current;
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1774',message:'Zinga detected - playing sounds',data:{actionId:a.id,zingaValue:a.zinga,streak,actionType:a.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         
         // Only play double/triple kill sounds if streak matches exactly
         if (streak === 3) {
@@ -1809,11 +1832,15 @@ function Game({ state, playerId, socket }) {
       setGhostCard(null);
       
       // Zinga FX
-      // IMPORTANT: Only process zinga if this action actually has zinga property set
-      if (a.zinga === 10 || a.zinga === 20) {
+      // IMPORTANT: Only process zinga if this action actually has zinga property set AND we're in playing phase
+      if ((a.zinga === 10 || a.zinga === 20) && state.phase === "playing") {
         // Increment streak ONLY if this is actually a zinga
         zingaStreakRef.current += 1;
         const streak = zingaStreakRef.current;
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1813',message:'Zinga detected (drop) - playing sounds',data:{actionId:a.id,zingaValue:a.zinga,streak,actionType:a.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
         
         // Only play double/triple kill sounds if streak matches exactly
         if (streak === 3) {
@@ -1842,13 +1869,17 @@ function Game({ state, playerId, socket }) {
         zingaStreakRef.current = 0;
       }
     }
-  }, [g?.lastAction?.id, mySeat]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [g?.lastAction?.id, mySeat, state.phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset zinga streak when phase changes or game restarts
   useEffect(() => {
-    if (state.phase !== "playing") {
-      zingaStreakRef.current = 0;
-    }
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1847',message:'Phase changed - resetting streak',data:{phase:state.phase,previousStreak:zingaStreakRef.current},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
+    // Reset streak when phase changes (including when entering playing phase)
+    zingaStreakRef.current = 0;
+    lastProcessedActionIdRef.current = null; // Also reset processed action ID
   }, [state.phase]);
 
   // Reset zinga streak when action changes and new action is not a zinga

@@ -427,27 +427,7 @@ function applyPlay(room, playerId, cardId) {
       }
     }
     
-    // Check if game should end immediately (101+ points reached)
-    if (room.match) {
-      // Calculate current hand scores (including bonus)
-      const aHand = computeTeamScore(g.captures.A);
-      const bHand = computeTeamScore(g.captures.B);
-      
-      // Calculate totals including current hand
-      const aTotal = room.match.totals.A + aHand.total;
-      const bTotal = room.match.totals.B + bHand.total;
-      const target = room.match.target;
-      
-      // If any team reached target, end game immediately
-      if (aTotal >= target || bTotal >= target) {
-        // End the current hand first to calculate final scores properly
-        endGame(room);
-        return; // endGame already broadcasts, so we can return
-      }
-    }
-  }
-
-  // Emit last action for client animations/FX
+  // Emit last action for client animations/FX FIRST (before checking for game end)
   g.lastAction = {
     id: nextActionId(room),
     type: actionType,
@@ -459,6 +439,64 @@ function applyPlay(room, playerId, cardId) {
 
   // Advance turn
   g.turnSeat = nextSeat(g.turnSeat);
+
+  // Check if game should end (101+ points reached) AFTER emitting lastAction
+  if (room.match) {
+    // Calculate current hand scores (including bonus)
+    const aHand = computeTeamScore(g.captures.A);
+    const bHand = computeTeamScore(g.captures.B);
+    
+    // Calculate totals including current hand
+    const aTotal = room.match.totals.A + aHand.total;
+    const bTotal = room.match.totals.B + bHand.total;
+    const target = room.match.target;
+    
+    // #region agent log
+    const logData = {location:'index.js:430',message:'Checking game end condition',data:{roomId:room.id,aTotal,bTotal,target,reachedTarget:aTotal>=target||bTotal>=target,lastActionId:g.lastAction?.id,lastActionCard:g.lastAction?.card?.label,lastActionType:g.lastAction?.type},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+    try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData) + '\n'); } catch {}
+    // #endregion
+    
+    // If any team reached target, show the card first, then end game after delay
+    if (aTotal >= target || bTotal >= target) {
+      // #region agent log
+      const logData2 = {location:'index.js:443',message:'Game end triggered - broadcasting last action first',data:{roomId:room.id,aTotal,bTotal,target,lastActionId:g.lastAction?.id,lastActionCard:g.lastAction?.card?.label},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+      try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData2) + '\n'); } catch {}
+      // #endregion
+      
+      // Broadcast the last action first so everyone sees the card and what was taken
+      broadcastRoom(room);
+      
+      // Wait for animation to complete (2-3 seconds) before ending the game
+      setTimeout(() => {
+        const liveRoom = rooms.get(room.id);
+        if (!liveRoom) {
+          // #region agent log
+          const logData3 = {location:'index.js:453',message:'Game end timeout - room not found',data:{roomId:room.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+          try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData3) + '\n'); } catch {}
+          // #endregion
+          return;
+        }
+        if (liveRoom.phase !== "playing") {
+          // #region agent log
+          const logData4 = {location:'index.js:457',message:'Game end timeout - phase already changed',data:{roomId:room.id,phase:liveRoom.phase},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+          try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData4) + '\n'); } catch {}
+          // #endregion
+          return; // Already ended or aborted
+        }
+        
+        // #region agent log
+        const logData5 = {location:'index.js:463',message:'Game end timeout - calling endGame',data:{roomId:room.id},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'};
+        try { appendFileSync(join(__dirname, '../../.cursor/debug.log'), JSON.stringify(logData5) + '\n'); } catch {}
+        // #endregion
+        
+        // End the current hand to calculate final scores properly
+        endGame(liveRoom);
+        broadcastRoom(liveRoom);
+      }, 2500); // 2.5 seconds delay to show the card and what was taken
+      
+      return; // Don't continue with normal flow - game will end after delay
+    }
+  }
 
   // Deal next round if needed
   if (allHandsEmpty(room)) {
