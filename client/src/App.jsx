@@ -7,6 +7,7 @@ import imgVinjak from "./assets/vinjak.png";
 import imgCasa from "./assets/casa.png";
 import imgCigareta from "./assets/cigareta.png";
 import imgSobranje from "./assets/sobranje.png";
+import imgMaramice from "./assets/maramice.png";
 import imgWoodenBackground from "./assets/wooden-background.png";
 import imgWoodenDesk from "./assets/wooden-desk.png";
 import gameCompletedSound from "./assets/game-completed.wav";
@@ -21,6 +22,9 @@ import cardDealSound from "./assets/card-deal.mp3";
 import doubleKillSound from "./assets/double-kill.mp3";
 import tripleKillSound from "./assets/triple-kill.mp3";
 import zingaSound from "./assets/zinga.mp3";
+import haHaSound from "./assets/ha-ha.mp3";
+import suiiiSound from "./assets/suiii.mp3";
+import cowSound from "./assets/cow.mp3";
 
 function clamp(n, a, b) {
   return Math.max(a, Math.min(b, n));
@@ -52,6 +56,44 @@ function teamLabel(team, players) {
 
 function relativePos(mySeat, seat) {
   return (seat - mySeat + 4) % 4; // 0=me, 1=left, 2=top, 3=right
+}
+
+const seatBasePct = {
+  0: { x: 50, y: 82 }, // bottom
+  1: { x: 16, y: 50 }, // left
+  2: { x: 50, y: 16 }, // top
+  3: { x: 84, y: 50 }  // right
+};
+
+function FlyingItemOverlay({ fromSeat, toSeat, mySeat, itemType, itemImg }) {
+  const fromRel = relativePos(mySeat, fromSeat);
+  const toRel = relativePos(mySeat, toSeat);
+  const start = seatBasePct[fromRel] || seatBasePct[0];
+  const end = seatBasePct[toRel] || seatBasePct[0];
+  const [go, setGo] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setGo(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return (
+    <div
+      className="absolute pointer-events-none z-40"
+      style={{
+        left: go ? `${end.x}%` : `${start.x}%`,
+        top: go ? `${end.y}%` : `${start.y}%`,
+        transform: "translate(-50%, -50%)",
+        transition: "left 1.5s ease-out, top 1.5s ease-out"
+      }}
+    >
+      {itemImg ? (
+        <img src={itemImg} alt={itemType === "maramice" ? "Maramice za suze" : itemType} className="h-14 w-auto object-contain drop-shadow-xl rounded-lg ring-2 ring-amber-400/50" />
+      ) : (
+        <span className="inline-flex items-center rounded-full bg-amber-500/95 text-black text-sm font-semibold px-3 py-1.5 shadow-xl ring-1 ring-amber-400/50">
+          {itemType === "maramice" ? "Maramice za suze" : itemType}
+        </span>
+      )}
+    </div>
+  );
 }
 
 function SeatBadge({ label, active }) {
@@ -1237,6 +1279,9 @@ function useAudioManager() {
       doubleKill: doubleKillSound,
       tripleKill: tripleKillSound,
       zinga: zingaSound,
+      haHa: haHaSound,
+      suiii: suiiiSound,
+      cow: cowSound,
     };
     
     // Kreiraj audio instance SINHRONO (bez reprodukcije - samo za unlock)
@@ -1311,6 +1356,9 @@ function useAudioManager() {
         doubleKill: doubleKillSound,
         tripleKill: tripleKillSound,
         zinga: zingaSound,
+        haHa: haHaSound,
+        suiii: suiiiSound,
+        cow: cowSound,
       };
       
       // #region agent log
@@ -1582,7 +1630,16 @@ function Game({ state, playerId, socket }) {
   const [ghostCard, setGhostCard] = useState(null); // {card, id} - last taken card ghost
   const [lastCardTransition, setLastCardTransition] = useState(null); // {card, fromSeat, id} kad je poslednja karta u spil
   const zingaStreakRef = useRef(0); // Track consecutive zinga count (0, 1, 2, 3+)
-  
+  const [showSendItemPopup, setShowSendItemPopup] = useState(false);
+  const [sendItemTargetId, setSendItemTargetId] = useState(null);
+  const [sendItemType, setSendItemType] = useState("maramice");
+  const sendItemPopupShownHandRef = useRef(null); // hand number when we showed popup (reset u sledećoj rundi)
+  const [activeReceivedItems, setActiveReceivedItems] = useState([]); // { fromPlayerId, fromSeat, toPlayerId, toSeat, itemType, expiresAt }
+  const [flyingItem, setFlyingItem] = useState(null); // { fromSeat, toSeat, itemType } for animation
+  const [showReactionPopup, setShowReactionPopup] = useState(false);
+  const [reactionError, setReactionError] = useState("");
+  const reactionPopupShownForActionIdRef = useRef(null);
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 640);
     window.addEventListener('resize', handleResize);
@@ -1891,6 +1948,83 @@ function Game({ state, playerId, socket }) {
     }
   }, [g?.lastAction?.id]);
 
+  // Send-item popup: show when unlocked (15+ lead in round), only for leading team, and player hasn't sent this hand
+  const sendItemUnlocked = g?.sendItemUnlocked === true;
+  const sendItemUsedPlayerIds = g?.sendItemUsedPlayerIds || [];
+  const aTotal = g?.captures?.A?.total ?? 0;
+  const bTotal = g?.captures?.B?.total ?? 0;
+  const myTeamLeadingBy15 = (myTeam === "A" && aTotal >= bTotal + 15) || (myTeam === "B" && bTotal >= aTotal + 15);
+  const canSendItem = sendItemUnlocked && myTeamLeadingBy15 && !sendItemUsedPlayerIds.includes(playerId);
+  const currentHand = g?.lastDeal?.hand ?? roomPlayers?.length ? 0 : null;
+  useEffect(() => {
+    if (!canSendItem || currentHand == null) return;
+    if (sendItemPopupShownHandRef.current === currentHand) return;
+    sendItemPopupShownHandRef.current = currentHand;
+    setShowSendItemPopup(true);
+  }, [canSendItem, currentHand]);
+
+  // Show "Pošalji reakciju" popup when this player took points on a Zinga
+  const lastAction = g?.lastAction;
+  const iAmZingaTaker = lastAction?.playerId === playerId && (lastAction?.zinga === 10 || lastAction?.zinga === 20);
+  useEffect(() => {
+    if (!iAmZingaTaker || !lastAction?.id) return;
+    if (reactionPopupShownForActionIdRef.current === lastAction.id) return;
+    reactionPopupShownForActionIdRef.current = lastAction.id;
+    setShowReactionPopup(true);
+  }, [iAmZingaTaker, lastAction?.id]);
+
+  // Listen for reaction-sent: play sound for everyone
+  const reactionToSound = { "ha-ha": "haHa", suiiii: "suiii", moo: "cow" };
+  useEffect(() => {
+    if (!socket) return;
+    const onReactionSent = (payload) => {
+      const soundKey = reactionToSound[payload.reactionId];
+      if (soundKey) playSound(soundKey, 0.5);
+    };
+    socket.on("reaction-sent", onReactionSent);
+    return () => socket.off("reaction-sent", onReactionSent);
+  }, [socket, playSound]);
+
+  // Listen for item-sent: show flying animation then item at recipient until expiresAt
+  useEffect(() => {
+    if (!socket) return;
+    const onItemSent = (payload) => {
+      setFlyingItem({
+        fromSeat: payload.fromSeat,
+        toSeat: payload.toSeat,
+        itemType: payload.itemType
+      });
+      setTimeout(() => {
+        setFlyingItem(null);
+        setActiveReceivedItems((prev) => [...prev, payload]);
+      }, 1800);
+    };
+    socket.on("item-sent", onItemSent);
+    return () => socket.off("item-sent", onItemSent);
+  }, [socket]);
+
+  // Remove expired items from display
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setActiveReceivedItems((prev) => prev.filter((item) => item.expiresAt > now));
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Clear received items and close send-item / reaction popups when new hand starts (0:0 u sledećoj rundi)
+  const prevHandRef = useRef(currentHand);
+  useEffect(() => {
+    if (currentHand != null && prevHandRef.current != null && currentHand !== prevHandRef.current) {
+      setActiveReceivedItems([]);
+      setShowSendItemPopup(false);
+      setShowReactionPopup(false);
+      prevHandRef.current = currentHand;
+    } else if (currentHand != null) {
+      prevHandRef.current = currentHand;
+    }
+  }, [currentHand]);
+
   // (removed) old lastDeal/round FX hooks; now driven by server deal event
 
   // Initialize props modal defaults from current player state
@@ -2005,6 +2139,31 @@ function Game({ state, playerId, socket }) {
     if (!socket || !text) return;
     setChatText("");
     socket.emit("chat:send", { text });
+  }
+
+  function sendItemToPlayer() {
+    if (!socket || !sendItemTargetId || !sendItemType) return;
+    setActionError("");
+    socket.emit("player:send-item", { targetPlayerId: sendItemTargetId, itemType: sendItemType }, (res) => {
+      if (res?.ok) {
+        setShowSendItemPopup(false);
+        setSendItemTargetId(null);
+      } else {
+        setActionError(res?.error || "Greška.");
+      }
+    });
+  }
+
+  function sendReaction(reactionId) {
+    if (!socket || !reactionId) return;
+    setReactionError("");
+    socket.emit("player:send-reaction", { reactionId }, (res) => {
+      if (res?.ok) {
+        setShowReactionPopup(false);
+      } else {
+        setReactionError(res?.error || "Greška.");
+      }
+    });
   }
 
   const [screenShake, setScreenShake] = useState(false);
@@ -2154,6 +2313,124 @@ function Game({ state, playerId, socket }) {
           </div>
         </div>
       ) : null}
+      {/* Send-item popup: otključava se kada ekipa vodi 15+ u rundi */}
+      {showSendItemPopup ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button type="button" className="absolute inset-0 bg-black/70" onClick={() => setShowSendItemPopup(false)} aria-label="Zatvori" />
+          <div className="relative w-full max-w-md rounded-2xl bg-neutral-950 ring-1 ring-white/10 p-4">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <div className="text-lg font-semibold">Pošalji protivniku</div>
+                <div className="text-xs text-white/60">Ekipa vodi 15+ poena u rundi. Izaberi predmet i primaoca.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSendItemPopup(false)}
+                className="rounded-xl bg-white/10 hover:bg-white/15 ring-1 ring-white/10 px-3 py-2 text-sm transition"
+              >
+                Zatvori
+              </button>
+            </div>
+            <div className="mb-4">
+              <div className="text-sm text-white/80 mb-2">Predmet:</div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: "maramice", label: "Maramice za suze", img: imgMaramice }
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setSendItemType(opt.id)}
+                    className={[
+                      "rounded-xl px-4 py-2 text-sm font-medium ring-1 transition inline-flex items-center gap-2",
+                      sendItemType === opt.id ? "ring-amber-400/50 bg-amber-500/20 text-amber-200" : "ring-white/10 bg-white/5 hover:bg-white/10"
+                    ].join(" ")}
+                  >
+                    {opt.img ? <img src={opt.img} alt="" className="h-8 w-auto object-contain" /> : null}
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="mb-4">
+              <div className="text-sm text-white/80 mb-2">Kome šalješ:</div>
+              <div className="grid grid-cols-2 gap-2">
+                {roomPlayers
+                  .filter((p) => p.team !== myTeam && !p.isBot)
+                  .map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSendItemTargetId(p.id)}
+                      className={[
+                        "rounded-xl px-3 py-2 text-sm font-medium ring-1 transition",
+                        sendItemTargetId === p.id ? "ring-emerald-400/50 bg-emerald-500/20 text-emerald-200" : "ring-white/10 bg-white/5 hover:bg-white/10"
+                      ].join(" ")}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+              </div>
+            </div>
+            {actionError ? <div className="mb-3 text-sm text-red-300">{actionError}</div> : null}
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowSendItemPopup(false)}
+                className="rounded-xl bg-white/10 hover:bg-white/15 ring-1 ring-white/10 px-3 py-2 text-sm transition"
+              >
+                Otkaži
+              </button>
+              <button
+                type="button"
+                onClick={sendItemToPlayer}
+                disabled={!sendItemTargetId}
+                className="rounded-xl bg-amber-500 text-black hover:bg-amber-400 px-4 py-2 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Pošalji
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {/* Reaction popup: nakon Zinge igrač koji je uzeo poene bira reakciju (zvuk) */}
+      {showReactionPopup ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <button type="button" className="absolute inset-0 bg-black/70" onClick={() => setShowReactionPopup(false)} aria-label="Zatvori" />
+          <div className="relative w-full max-w-sm rounded-2xl bg-neutral-950 ring-1 ring-white/10 p-4">
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <div className="text-lg font-semibold">Pošalji reakciju</div>
+                <div className="text-xs text-white/60">Izaberi jednu od tri reakcije — svi će čuti zvuk.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReactionPopup(false)}
+                className="rounded-xl bg-white/10 hover:bg-white/15 ring-1 ring-white/10 px-3 py-2 text-sm transition"
+              >
+                Zatvori
+              </button>
+            </div>
+            {reactionError ? <div className="mb-3 text-sm text-red-300">{reactionError}</div> : null}
+            <div className="flex flex-col gap-2">
+              {[
+                { id: "ha-ha", label: "Ha-Ha" },
+                { id: "suiiii", label: "Suiiii" },
+                { id: "moo", label: "Moo" }
+              ].map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => sendReaction(opt.id)}
+                  className="rounded-xl px-4 py-3 text-sm font-medium ring-1 ring-white/10 bg-white/5 hover:bg-white/10 transition flex items-center justify-center"
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
       <CapturedCardsModal
         open={showCaptured}
         onClose={() => setShowCaptured(false)}
@@ -2255,6 +2532,41 @@ function Game({ state, playerId, socket }) {
           >
             <div className="absolute inset-0 bg-black/35" />
             <PlayerPropsLayer mySeat={mySeat} players={roomPlayers} glassShakePlayerId={glassShakePlayerId} />
+            {/* Flying item animation (from sender to recipient) */}
+            {flyingItem ? (
+              <FlyingItemOverlay
+                fromSeat={flyingItem.fromSeat}
+                toSeat={flyingItem.toSeat}
+                mySeat={mySeat}
+                itemType={flyingItem.itemType}
+                itemImg={flyingItem.itemType === "maramice" ? imgMaramice : null}
+              />
+            ) : null}
+            {/* Received items at recipient (maramice etc.) */}
+            {activeReceivedItems
+              .filter((item) => item.expiresAt > Date.now())
+              .map((item, idx) => {
+                const rel = relativePos(mySeat, item.toSeat);
+                const pos = seatBasePct[rel] || seatBasePct[0];
+                return (
+                <div
+                  key={`${item.toPlayerId}-${item.itemType}-${idx}`}
+                  className="absolute pointer-events-none z-30"
+                  style={{
+                    left: `${pos.x}%`,
+                    top: `${pos.y}%`,
+                    transform: "translate(-50%, -50%)"
+                  }}
+                >
+                  {item.itemType === "maramice" ? (
+                    <img src={imgMaramice} alt="Maramice za suze" className="h-12 w-auto object-contain drop-shadow-lg rounded-lg ring-2 ring-amber-400/40" />
+                  ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 text-black text-xs font-semibold px-2 py-1 shadow-lg">
+                      {item.itemType}
+                    </span>
+                  )}
+                </div>
+              );})}
             <DeckStack
               mySeat={mySeat}
               deckOwnerSeat={g?.deckOwnerSeat ?? 0}
