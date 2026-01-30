@@ -1961,9 +1961,11 @@ function Game({ state, playerId, socket }) {
     if (sendItemPopupShownHandRef.current === currentHand) return;
     sendItemPopupShownHandRef.current = currentHand;
     setShowSendItemPopup(true);
+    const t = setTimeout(() => setShowSendItemPopup(false), 5000);
+    return () => clearTimeout(t);
   }, [canSendItem, currentHand]);
 
-  // Show "Pošalji reakciju" popup when this player took points on a Zinga
+  // Show "Pošalji reakciju" popup when this player took points on a Zinga; prozor 5 sekundi (ne gasi se kad neko drugi baci kartu)
   const lastAction = g?.lastAction;
   const iAmZingaTaker = lastAction?.playerId === playerId && (lastAction?.zinga === 10 || lastAction?.zinga === 20);
   useEffect(() => {
@@ -1971,6 +1973,8 @@ function Game({ state, playerId, socket }) {
     if (reactionPopupShownForActionIdRef.current === lastAction.id) return;
     reactionPopupShownForActionIdRef.current = lastAction.id;
     setShowReactionPopup(true);
+    const t = setTimeout(() => setShowReactionPopup(false), 5000);
+    return () => clearTimeout(t);
   }, [iAmZingaTaker, lastAction?.id]);
 
   // Listen for reaction-sent: play sound for everyone
@@ -2313,7 +2317,7 @@ function Game({ state, playerId, socket }) {
           </div>
         </div>
       ) : null}
-      {/* Send-item popup: otključava se kada ekipa vodi 15+ u rundi */}
+      {/* Send-item popup: otključava se kada ekipa vodi 15+ u rundi; 5 sekundi da izabereš kome šalješ */}
       {showSendItemPopup ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <button type="button" className="absolute inset-0 bg-black/70" onClick={() => setShowSendItemPopup(false)} aria-label="Zatvori" />
@@ -2321,7 +2325,7 @@ function Game({ state, playerId, socket }) {
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
                 <div className="text-lg font-semibold">Pošalji protivniku</div>
-                <div className="text-xs text-white/60">Ekipa vodi 15+ poena u rundi. Izaberi predmet i primaoca.</div>
+                <div className="text-xs text-white/60">Ekipa vodi 15+ poena. Imaš 5 sekundi — izaberi predmet i kome šalješ (gubitnike).</div>
               </div>
               <button
                 type="button"
@@ -2353,23 +2357,29 @@ function Game({ state, playerId, socket }) {
               </div>
             </div>
             <div className="mb-4">
-              <div className="text-sm text-white/80 mb-2">Kome šalješ:</div>
-              <div className="grid grid-cols-2 gap-2">
-                {roomPlayers
-                  .filter((p) => p.team !== myTeam && !p.isBot)
-                  .map((p) => (
+              <div className="text-sm font-medium text-white mb-2">Kome šalješ (protivnici koji gube):</div>
+              <div className="flex flex-col gap-2">
+                {(() => {
+                  const opponents = roomPlayers.filter((p) => p.team !== myTeam && !p.isBot);
+                  if (opponents.length === 0) {
+                    return <div className="text-sm text-white/60 py-2">Nema protivnika u sobi.</div>;
+                  }
+                  return opponents.map((p) => (
                     <button
                       key={p.id}
                       type="button"
                       onClick={() => setSendItemTargetId(p.id)}
                       className={[
-                        "rounded-xl px-3 py-2 text-sm font-medium ring-1 transition",
-                        sendItemTargetId === p.id ? "ring-emerald-400/50 bg-emerald-500/20 text-emerald-200" : "ring-white/10 bg-white/5 hover:bg-white/10"
+                        "rounded-xl px-4 py-3 text-base font-semibold ring-2 transition text-left",
+                        sendItemTargetId === p.id
+                          ? "ring-amber-400 bg-amber-500/30 text-amber-100"
+                          : "ring-white/20 bg-white/10 text-white hover:bg-white/20 hover:ring-white/30"
                       ].join(" ")}
                     >
-                      {p.name}
+                      {p.name || "Igrač"}
                     </button>
-                  ))}
+                  ));
+                })()}
               </div>
             </div>
             {actionError ? <div className="mb-3 text-sm text-red-300">{actionError}</div> : null}
@@ -2401,7 +2411,7 @@ function Game({ state, playerId, socket }) {
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
                 <div className="text-lg font-semibold">Pošalji reakciju</div>
-                <div className="text-xs text-white/60">Izaberi jednu od tri reakcije — svi će čuti zvuk.</div>
+                <div className="text-xs text-white/60">Imaš 5 sekundi. Izaberi jednu od tri reakcije — svi će čuti zvuk.</div>
               </div>
               <button
                 type="button"

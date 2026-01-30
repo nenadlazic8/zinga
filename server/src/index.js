@@ -118,8 +118,9 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
     room.match.winner = null;
   }
 
-  // Reset "send item" state at start of each hand (0:0 in this round)
+  // Reset "send item" and reaction window at start of each hand
   room.sendItemUsedThisHand = new Set();
+  room.zingaReactionWindow = null;
 
   // Set game first, then phase (to avoid race condition)
   room.game = {
@@ -441,6 +442,11 @@ function applyPlay(room, playerId, cardId) {
     card: played,
     zinga: zingaFx
   };
+
+  // Prozor od 5 sekundi za reakciju nakon Zinge (ne gasi se kad neko drugi baci kartu)
+  if (zingaFx === 10 || zingaFx === 20) {
+    room.zingaReactionWindow = { playerId: player.id, actionId: g.lastAction.id, at: Date.now() };
+  }
 
   // Advance turn
   g.turnSeat = nextSeat(g.turnSeat);
@@ -1258,21 +1264,21 @@ io.on("connection", (socket) => {
       const room = rooms.get(roomId);
       if (!room) throw new Error("Soba nije pronađena.");
       if (room.phase !== "playing" || !room.game) throw new Error("Igra nije u toku.");
-      const g = room.game;
-      const last = g.lastAction;
-      if (!last || last.zinga !== 10 && last.zinga !== 20) throw new Error("Reakcija je dozvoljena samo nakon Zinge.");
-      if (last.playerId !== playerId) throw new Error("Samo igrač koji je uzeo Zingu može poslati reakciju.");
-      if (room.reactionSentForActionId === last.id) throw new Error("Reakcija za ovu Zingu je već poslata.");
+      const win = room.zingaReactionWindow;
+      if (!win || win.playerId !== playerId) throw new Error("Reakcija je dozvoljena samo nakon Zinge.");
+      const elapsed = Date.now() - win.at;
+      if (elapsed > 5000) throw new Error("Reakcija mora u narednih 5 sekundi nakon Zinge.");
+      if (win.used) throw new Error("Reakcija za ovu Zingu je već poslata.");
       const allowedReactions = ["ha-ha", "suiiii", "moo"];
       if (!allowedReactions.includes(String(reactionId || ""))) throw new Error("Nevažeća reakcija.");
-      room.reactionSentForActionId = last.id;
+      room.zingaReactionWindow.used = true;
       const fromPlayer = findPlayer(room, playerId);
       io.to(roomId).emit("reaction-sent", {
         playerId,
         playerName: fromPlayer?.name || "Igrač",
-        fromSeat: fromPlayer?.seat ?? last.fromSeat,
+        fromSeat: fromPlayer?.seat ?? 0,
         reactionId: String(reactionId),
-        actionId: last.id
+        actionId: win.actionId
       });
       ack?.({ ok: true });
     } catch (e) {
