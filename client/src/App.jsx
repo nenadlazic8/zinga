@@ -1287,13 +1287,15 @@ function useAudioManager() {
     // Kreiraj audio instance SINHRONO (bez reprodukcije - samo za unlock)
     Object.keys(sounds).forEach((key) => {
       try {
-        const audio = new Audio(sounds[key]);
-        audio.preload = 'auto';
-        audio.volume = 0; // Set volume to 0 to prevent any sound from playing during unlock
-        audioInstancesRef.current[key] = audio;
-        
-        // Pokušaj unlock direktno sa volume 0 (neće se čuti)
-        const playPromise = audio.play();
+          const audio = new Audio(sounds[key]);
+          audio.preload = 'auto';
+          audio.volume = 0; // Set volume to 0 to prevent any sound from playing during unlock
+          audioInstancesRef.current[key] = audio;
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:unlockAudioDirectly-beforePlay',message:'Before play() in unlockAudioDirectly',data:{soundKey:key,volumeSet:audio.volume,readyState:audio.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H6'})}).catch(()=>{});
+          // #endregion
+          // Pokušaj unlock direktno sa volume 0 (neće se čuti)
+          const playPromise = audio.play();
         if (playPromise !== undefined) {
           playPromise
             .then(() => {
@@ -1379,6 +1381,7 @@ function useAudioManager() {
           
           // #region agent log
           fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1078',message:'Audio element created',data:{soundKey:key,readyState:audio.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:enableOnInteraction-beforePlay',message:'Before play() in enableOnInteraction',data:{soundKey:key,volumeSet:audio.volume,readyState:audio.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H6'})}).catch(()=>{});
           // #endregion
           
           // iOS Safari: play() mora biti pozvan direktno u handleru, ne u Promise chain-u
@@ -1956,12 +1959,17 @@ function Game({ state, playerId, socket }) {
   const myTeamLeadingBy15 = (myTeam === "A" && aTotal >= bTotal + 15) || (myTeam === "B" && bTotal >= aTotal + 15);
   const canSendItem = sendItemUnlocked && myTeamLeadingBy15 && !sendItemUsedPlayerIds.includes(playerId);
   const currentHand = g?.lastDeal?.hand ?? roomPlayers?.length ? 0 : null;
+  // #region agent log - log canSendItem condition
+  useEffect(() => {
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:canSendItem-check',message:'canSendItem condition',data:{canSendItem,sendItemUnlocked,myTeamLeadingBy15,sendItemUsedPlayerIds,playerId,roomPlayersLength:roomPlayers.length,myTeam,me:me?{id:me.id,name:me.name,team:me.team}:null},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H10'})}).catch(()=>{});
+  }, [canSendItem, sendItemUnlocked, myTeamLeadingBy15]);
+  // #endregion
   const sendItemOpponents = roomPlayers.filter((p) => p.team !== myTeam && !p.isBot);
   // #region agent log
   useEffect(() => {
     if (!showSendItemPopup) return;
     const opponents = roomPlayers.filter((p) => p.team !== myTeam && !p.isBot);
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:send-item-popup',message:'Send-item popup open',data:{roomPlayersLength:roomPlayers.length,myTeam,myPlayerId:playerId,players:roomPlayers.map(p=>({id:p.id,name:p.name,team:p.team,isBot:!!p.isBot})),opponentsLength:opponents.length,opponents:opponents.map(o=>({id:o.id,name:o.name}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:send-item-popup',message:'Send-item popup open',data:{roomPlayersLength:roomPlayers.length,myTeam,myPlayerId:playerId,players:roomPlayers.map(p=>({id:p.id,name:p.name,team:p.team,isBot:!!p.isBot})),opponentsLength:opponents.length,opponents:opponents.map(o=>({id:o.id,name:o.name}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H10'})}).catch(()=>{});
   }, [showSendItemPopup]);
   // #endregion
   useEffect(() => {
