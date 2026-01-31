@@ -7,7 +7,6 @@ import imgVinjak from "./assets/vinjak.png";
 import imgCasa from "./assets/casa.png";
 import imgCigareta from "./assets/cigareta.png";
 import imgSobranje from "./assets/sobranje.png";
-import imgMaramice from "./assets/maramice.png";
 import imgWoodenBackground from "./assets/wooden-background.png";
 import imgWoodenDesk from "./assets/wooden-desk.png";
 import gameCompletedSound from "./assets/game-completed.wav";
@@ -64,37 +63,6 @@ const seatBasePct = {
   2: { x: 50, y: 16 }, // top
   3: { x: 84, y: 50 }  // right
 };
-
-function FlyingItemOverlay({ fromSeat, toSeat, mySeat, itemType, itemImg }) {
-  const fromRel = relativePos(mySeat, fromSeat);
-  const toRel = relativePos(mySeat, toSeat);
-  const start = seatBasePct[fromRel] || seatBasePct[0];
-  const end = seatBasePct[toRel] || seatBasePct[0];
-  const [go, setGo] = useState(false);
-  useEffect(() => {
-    const raf = requestAnimationFrame(() => setGo(true));
-    return () => cancelAnimationFrame(raf);
-  }, []);
-  return (
-    <div
-      className="absolute pointer-events-none z-40"
-      style={{
-        left: go ? `${end.x}%` : `${start.x}%`,
-        top: go ? `${end.y}%` : `${start.y}%`,
-        transform: "translate(-50%, -50%)",
-        transition: "left 1.5s ease-out, top 1.5s ease-out"
-      }}
-    >
-      {itemImg ? (
-        <img src={itemImg} alt={itemType === "maramice" ? "Maramice za suze" : itemType} className="h-14 w-auto object-contain drop-shadow-xl rounded-lg ring-2 ring-amber-400/50" />
-      ) : (
-        <span className="inline-flex items-center rounded-full bg-amber-500/95 text-black text-sm font-semibold px-3 py-1.5 shadow-xl ring-1 ring-amber-400/50">
-          {itemType === "maramice" ? "Maramice za suze" : itemType}
-        </span>
-      )}
-    </div>
-  );
-}
 
 function SeatBadge({ label, active }) {
   return (
@@ -1284,48 +1252,20 @@ function useAudioManager() {
       cow: cowSound,
     };
     
-    // Kreiraj audio instance SINHRONO (bez reprodukcije - samo za unlock)
+    // Kreiraj audio instance BEZ play() — na mobilnom play() sa volume 0 i dalje može da se čuje
     Object.keys(sounds).forEach((key) => {
       try {
-          const audio = new Audio(sounds[key]);
-          audio.preload = 'auto';
-          audio.volume = 0; // Set volume to 0 to prevent any sound from playing during unlock
-          audioInstancesRef.current[key] = audio;
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:unlockAudioDirectly-beforePlay',message:'Before play() in unlockAudioDirectly',data:{soundKey:key,volumeSet:audio.volume,readyState:audio.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H6'})}).catch(()=>{});
-          // #endregion
-          // Pokušaj unlock direktno sa volume 0 (neće se čuti)
-          const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              audio.pause();
-              audio.currentTime = 0;
-              // Restore original volume after unlock
-              audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
-              // #region agent log
-              console.log(`[AUDIO] Unlocked ${key}`);
-              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1070',message:'Direct unlock success',data:{soundKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-              // #endregion
-            })
-            .catch((err) => {
-              // Restore original volume even on error
-              audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
-              // #region agent log
-              console.log(`[AUDIO] Unlock failed ${key}:`, err);
-              fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1075',message:'Direct unlock failed',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-              // #endregion
-            });
-        }
+        const audio = new Audio(sounds[key]);
+        audio.preload = 'auto';
+        audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
+        audioInstancesRef.current[key] = audio;
       } catch (err) {
         // #region agent log
-        console.log(`[AUDIO] Failed to create ${key}:`, err);
         fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1080',message:'Direct unlock creation failed',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
         // #endregion
       }
     });
-    
-    // Silent audio unlock za iOS Safari
+    // Samo jedan tihi WAV za unlock — nikad ne puštaj sve igračke zvukove pri unlock-u
     try {
       const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
       silentAudio.volume = 0.01;
@@ -1367,52 +1307,13 @@ function useAudioManager() {
       fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1069',message:'Creating audio instances',data:{soundKeys:Object.keys(sounds),hasCardDrop:!!sounds.cardDrop,hasCardDeal:!!sounds.cardDeal},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
       
-      // Kreiraj i unlock audio DIREKTNO u handleru (iOS Safari zahteva ovo)
+      // Kreiraj audio instance BEZ play() — na mobilnom play() na svim fajlovima se čuje kao "svi zvukovi odjednom"
       Object.keys(sounds).forEach((key) => {
         try {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1073',message:'Creating audio element',data:{soundKey:key,hasSource:!!sounds[key]},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-          // #endregion
-          
           const audio = new Audio(sounds[key]);
           audio.preload = 'auto';
-          audio.volume = 0; // Set volume to 0 to prevent any sound from playing during unlock
+          audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
           audioInstancesRef.current[key] = audio;
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1078',message:'Audio element created',data:{soundKey:key,readyState:audio.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-          fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:enableOnInteraction-beforePlay',message:'Before play() in enableOnInteraction',data:{soundKey:key,volumeSet:audio.volume,readyState:audio.readyState},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H6'})}).catch(()=>{});
-          // #endregion
-          
-          // iOS Safari: play() mora biti pozvan direktno u handleru, ne u Promise chain-u
-          // Pokušaj unlock odmah, ali ne čekaj Promise (iOS Safari blokira ako čekaš)
-          const playPromise = audio.play();
-          if (playPromise !== undefined) {
-            playPromise
-              .then(() => {
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1083',message:'Audio unlock success',data:{soundKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                // #endregion
-                audio.pause();
-                audio.currentTime = 0;
-                // Restore original volume after unlock
-                audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
-              })
-              .catch((err) => {
-                // Restore original volume even on error
-                audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
-                // #region agent log
-                fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1087',message:'Audio unlock failed',data:{soundKey:key,error:err?.message||String(err),name:err?.name},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-                // #endregion
-                // Ignore - audio će biti unlocked na prvom pravom play-u
-              });
-          } else {
-            // Restore original volume if play returned undefined
-            audio.volume = key === 'cardDrop' ? 0.3 : 0.4;
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1090',message:'Audio play returned undefined',data:{soundKey:key},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
-          }
         } catch (err) {
           // #region agent log
           fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:1092',message:'Failed to create audio element',data:{soundKey:key,error:err?.message||String(err)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
@@ -1421,7 +1322,7 @@ function useAudioManager() {
         }
       });
       
-      // iOS Safari: dodatni unlock pokušaj sa silent audio
+      // Samo jedan tihi WAV za unlock (nikad svi igrački zvukovi)
       try {
         const silentAudio = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
         silentAudio.volume = 0.01;
@@ -1633,12 +1534,6 @@ function Game({ state, playerId, socket }) {
   const [ghostCard, setGhostCard] = useState(null); // {card, id} - last taken card ghost
   const [lastCardTransition, setLastCardTransition] = useState(null); // {card, fromSeat, id} kad je poslednja karta u spil
   const zingaStreakRef = useRef(0); // Track consecutive zinga count (0, 1, 2, 3+)
-  const [showSendItemPopup, setShowSendItemPopup] = useState(false);
-  const [sendItemTargetId, setSendItemTargetId] = useState(null);
-  const [sendItemType, setSendItemType] = useState("maramice");
-  const sendItemPopupShownHandRef = useRef(null); // hand number when we showed popup (reset u sledećoj rundi)
-  const [activeReceivedItems, setActiveReceivedItems] = useState([]); // { fromPlayerId, fromSeat, toPlayerId, toSeat, itemType, expiresAt }
-  const [flyingItem, setFlyingItem] = useState(null); // { fromSeat, toSeat, itemType } for animation
   const [showReactionPopup, setShowReactionPopup] = useState(false);
   const [reactionError, setReactionError] = useState("");
   const reactionPopupShownForActionIdRef = useRef(null);
@@ -1861,17 +1756,14 @@ function Game({ state, playerId, socket }) {
         
         // Only play double/triple kill sounds if streak matches exactly
         if (streak === 3) {
-          // Triple kill! Play triple kill sound and zinga sound three times
-          playSound('tripleKill', 0.6);
+          // Trostruka zinga — samo zinga zvuk tri puta (bez triple kill zvuka)
           playSound('zinga', 0.6);
           setTimeout(() => playSound('zinga', 0.6), 100);
           setTimeout(() => playSound('zinga', 0.6), 200);
         } else if (streak === 2) {
-          // Double kill! Play both sounds simultaneously
+          // Dupla zinga — samo zinga zvuk (bez double kill zvuka)
           playSound('zinga', 0.6);
-          playSound('doubleKill', 0.6);
         } else if (streak === 1) {
-          // Regular zinga - play zinga sound only
           playSound('zinga', 0.6);
         }
         // If streak > 3, don't play any special sounds (just continue counting)
@@ -1904,17 +1796,14 @@ function Game({ state, playerId, socket }) {
         
         // Only play double/triple kill sounds if streak matches exactly
         if (streak === 3) {
-          // Triple kill! Play triple kill sound and zinga sound three times
-          playSound('tripleKill', 0.6);
+          // Trostruka zinga — samo zinga zvuk tri puta (bez triple kill zvuka)
           playSound('zinga', 0.6);
           setTimeout(() => playSound('zinga', 0.6), 100);
           setTimeout(() => playSound('zinga', 0.6), 200);
         } else if (streak === 2) {
-          // Double kill! Play both sounds simultaneously
+          // Dupla zinga — samo zinga zvuk (bez double kill zvuka)
           playSound('zinga', 0.6);
-          playSound('doubleKill', 0.6);
         } else if (streak === 1) {
-          // Regular zinga - play zinga sound only
           playSound('zinga', 0.6);
         }
         // If streak > 3, don't play any special sounds (just continue counting)
@@ -1951,35 +1840,7 @@ function Game({ state, playerId, socket }) {
     }
   }, [g?.lastAction?.id]);
 
-  // Send-item popup: show when unlocked (15+ lead in round), only for leading team, and player hasn't sent this hand
-  const sendItemUnlocked = g?.sendItemUnlocked === true;
-  const sendItemUsedPlayerIds = g?.sendItemUsedPlayerIds || [];
-  const aTotal = g?.captures?.A?.total ?? 0;
-  const bTotal = g?.captures?.B?.total ?? 0;
-  const myTeamLeadingBy15 = (myTeam === "A" && aTotal >= bTotal + 15) || (myTeam === "B" && bTotal >= aTotal + 15);
-  const canSendItem = sendItemUnlocked && myTeamLeadingBy15 && !sendItemUsedPlayerIds.includes(playerId);
   const currentHand = g?.lastDeal?.hand ?? roomPlayers?.length ? 0 : null;
-  // #region agent log - log canSendItem condition
-  useEffect(() => {
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:canSendItem-check',message:'canSendItem condition',data:{canSendItem,sendItemUnlocked,myTeamLeadingBy15,sendItemUsedPlayerIds,playerId,roomPlayersLength:roomPlayers.length,myTeam,me:me?{id:me.id,name:me.name,team:me.team}:null},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H10'})}).catch(()=>{});
-  }, [canSendItem, sendItemUnlocked, myTeamLeadingBy15]);
-  // #endregion
-  const sendItemOpponents = roomPlayers.filter((p) => p.team !== myTeam && !p.isBot);
-  // #region agent log
-  useEffect(() => {
-    if (!showSendItemPopup) return;
-    const opponents = roomPlayers.filter((p) => p.team !== myTeam && !p.isBot);
-    fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:send-item-popup',message:'Send-item popup open',data:{roomPlayersLength:roomPlayers.length,myTeam,myPlayerId:playerId,players:roomPlayers.map(p=>({id:p.id,name:p.name,team:p.team,isBot:!!p.isBot})),opponentsLength:opponents.length,opponents:opponents.map(o=>({id:o.id,name:o.name}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'H10'})}).catch(()=>{});
-  }, [showSendItemPopup]);
-  // #endregion
-  useEffect(() => {
-    if (!canSendItem || currentHand == null) return;
-    if (sendItemPopupShownHandRef.current === currentHand) return;
-    sendItemPopupShownHandRef.current = currentHand;
-    setShowSendItemPopup(true);
-    const t = setTimeout(() => setShowSendItemPopup(false), 5000);
-    return () => clearTimeout(t);
-  }, [canSendItem, currentHand]);
 
   // Show "Pošalji reakciju" popup when this player took points on a Zinga; prozor 5 sekundi (ne gasi se kad neko drugi baci kartu)
   const lastAction = g?.lastAction;
@@ -2005,39 +1866,10 @@ function Game({ state, playerId, socket }) {
     return () => socket.off("reaction-sent", onReactionSent);
   }, [socket, playSound]);
 
-  // Listen for item-sent: show flying animation then item at recipient until expiresAt
-  useEffect(() => {
-    if (!socket) return;
-    const onItemSent = (payload) => {
-      setFlyingItem({
-        fromSeat: payload.fromSeat,
-        toSeat: payload.toSeat,
-        itemType: payload.itemType
-      });
-      setTimeout(() => {
-        setFlyingItem(null);
-        setActiveReceivedItems((prev) => [...prev, payload]);
-      }, 1800);
-    };
-    socket.on("item-sent", onItemSent);
-    return () => socket.off("item-sent", onItemSent);
-  }, [socket]);
-
-  // Remove expired items from display
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      setActiveReceivedItems((prev) => prev.filter((item) => item.expiresAt > now));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Clear received items and close send-item / reaction popups when new hand starts (0:0 u sledećoj rundi)
+  // Close reaction popup when new hand starts (0:0 u sledećoj rundi)
   const prevHandRef = useRef(currentHand);
   useEffect(() => {
     if (currentHand != null && prevHandRef.current != null && currentHand !== prevHandRef.current) {
-      setActiveReceivedItems([]);
-      setShowSendItemPopup(false);
       setShowReactionPopup(false);
       prevHandRef.current = currentHand;
     } else if (currentHand != null) {
@@ -2159,19 +1991,6 @@ function Game({ state, playerId, socket }) {
     if (!socket || !text) return;
     setChatText("");
     socket.emit("chat:send", { text });
-  }
-
-  function sendItemToPlayer() {
-    if (!socket || !sendItemTargetId || !sendItemType) return;
-    setActionError("");
-    socket.emit("player:send-item", { targetPlayerId: sendItemTargetId, itemType: sendItemType }, (res) => {
-      if (res?.ok) {
-        setShowSendItemPopup(false);
-        setSendItemTargetId(null);
-      } else {
-        setActionError(res?.error || "Greška.");
-      }
-    });
   }
 
   function sendReaction(reactionId) {
@@ -2333,94 +2152,6 @@ function Game({ state, playerId, socket }) {
           </div>
         </div>
       ) : null}
-      {/* Send-item popup: otključava se kada ekipa vodi 15+ u rundi; 5 sekundi da izabereš kome šalješ */}
-      {showSendItemPopup ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button type="button" className="absolute inset-0 bg-black/70" onClick={() => setShowSendItemPopup(false)} aria-label="Zatvori" />
-          <div className="relative w-full max-w-md rounded-2xl bg-neutral-950 ring-1 ring-white/10 p-4">
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div>
-                <div className="text-lg font-semibold">Pošalji protivniku</div>
-                <div className="text-xs text-white/60">Ekipa vodi 15+ poena. Imaš 5 sekundi — izaberi predmet i kome šalješ (gubitnike).</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowSendItemPopup(false)}
-                className="rounded-xl bg-white/10 hover:bg-white/15 ring-1 ring-white/10 px-3 py-2 text-sm transition"
-              >
-                Zatvori
-              </button>
-            </div>
-            <div className="mb-4">
-              <div className="text-sm text-white/80 mb-2">Predmet:</div>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { id: "maramice", label: "Maramice za suze", img: imgMaramice }
-                ].map((opt) => (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => setSendItemType(opt.id)}
-                    className={[
-                      "rounded-xl px-4 py-2 text-sm font-medium ring-1 transition inline-flex items-center gap-2",
-                      sendItemType === opt.id ? "ring-amber-400/50 bg-amber-500/20 text-amber-200" : "ring-white/10 bg-white/5 hover:bg-white/10"
-                    ].join(" ")}
-                  >
-                    {opt.img ? <img src={opt.img} alt="" className="h-8 w-auto object-contain" /> : null}
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="mb-4">
-              <div className="text-sm font-medium text-white mb-2">Kome šalješ (protivnici koji gube):</div>
-              <div className="flex flex-col gap-2">
-                {(() => {
-                  // #region agent log
-                  fetch('http://127.0.0.1:7242/ingest/b921345b-3c00-4c3a-8da2-24c4d46638c1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'App.jsx:send-item-render',message:'Kome šalješ render',data:{opponentsLength:sendItemOpponents.length,opponents:sendItemOpponents.map(o=>({id:o.id,name:o.name,team:o.team})),branch:sendItemOpponents.length===0?'empty':'buttons'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                  // #endregion
-                  if (sendItemOpponents.length === 0) {
-                    return <div className="text-sm text-white/60 py-2">Nema protivnika u sobi.</div>;
-                  }
-                  return sendItemOpponents.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => setSendItemTargetId(p.id)}
-                      className={[
-                        "rounded-xl px-4 py-3 text-base font-semibold ring-2 transition text-left",
-                        sendItemTargetId === p.id
-                          ? "ring-amber-400 bg-amber-500/30 text-amber-100"
-                          : "ring-white/20 bg-white/10 text-white hover:bg-white/20 hover:ring-white/30"
-                      ].join(" ")}
-                    >
-                      {p.name || "Igrač"}
-                    </button>
-                  ));
-                })()}
-              </div>
-            </div>
-            {actionError ? <div className="mb-3 text-sm text-red-300">{actionError}</div> : null}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowSendItemPopup(false)}
-                className="rounded-xl bg-white/10 hover:bg-white/15 ring-1 ring-white/10 px-3 py-2 text-sm transition"
-              >
-                Otkaži
-              </button>
-              <button
-                type="button"
-                onClick={sendItemToPlayer}
-                disabled={!sendItemTargetId}
-                className="rounded-xl bg-amber-500 text-black hover:bg-amber-400 px-4 py-2 text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Pošalji
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
       {/* Reaction popup: nakon Zinge igrač koji je uzeo poene bira reakciju (zvuk) */}
       {showReactionPopup ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -2560,41 +2291,6 @@ function Game({ state, playerId, socket }) {
           >
             <div className="absolute inset-0 bg-black/35" />
             <PlayerPropsLayer mySeat={mySeat} players={roomPlayers} glassShakePlayerId={glassShakePlayerId} />
-            {/* Flying item animation (from sender to recipient) */}
-            {flyingItem ? (
-              <FlyingItemOverlay
-                fromSeat={flyingItem.fromSeat}
-                toSeat={flyingItem.toSeat}
-                mySeat={mySeat}
-                itemType={flyingItem.itemType}
-                itemImg={flyingItem.itemType === "maramice" ? imgMaramice : null}
-              />
-            ) : null}
-            {/* Received items at recipient (maramice etc.) */}
-            {activeReceivedItems
-              .filter((item) => item.expiresAt > Date.now())
-              .map((item, idx) => {
-                const rel = relativePos(mySeat, item.toSeat);
-                const pos = seatBasePct[rel] || seatBasePct[0];
-                return (
-                <div
-                  key={`${item.toPlayerId}-${item.itemType}-${idx}`}
-                  className="absolute pointer-events-none z-30"
-                  style={{
-                    left: `${pos.x}%`,
-                    top: `${pos.y}%`,
-                    transform: "translate(-50%, -50%)"
-                  }}
-                >
-                  {item.itemType === "maramice" ? (
-                    <img src={imgMaramice} alt="Maramice za suze" className="h-12 w-auto object-contain drop-shadow-lg rounded-lg ring-2 ring-amber-400/40" />
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 text-black text-xs font-semibold px-2 py-1 shadow-lg">
-                      {item.itemType}
-                    </span>
-                  )}
-                </div>
-              );})}
             <DeckStack
               mySeat={mySeat}
               deckOwnerSeat={g?.deckOwnerSeat ?? 0}

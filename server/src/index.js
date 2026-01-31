@@ -118,8 +118,6 @@ function startGame(room, startSeat = room.match?.startSeat ?? 0) {
     room.match.winner = null;
   }
 
-  // Reset "send item" and reaction window at start of each hand
-  room.sendItemUsedThisHand = new Set();
   room.zingaReactionWindow = null;
 
   // Set game first, then phase (to avoid race condition)
@@ -681,11 +679,6 @@ function sanitizeStateFor(room, viewerPlayerId) {
   const aPileTop = g.captures.A.cards.length ? g.captures.A.cards[g.captures.A.cards.length - 1] : null;
   const bPileTop = g.captures.B.cards.length ? g.captures.B.cards[g.captures.B.cards.length - 1] : null;
 
-  // Send-item: unlocked when one team leads by 15+ in this hand
-  const handDiff = Math.abs(aScore.total - bScore.total);
-  const sendItemUnlocked = handDiff >= 15;
-  const sendItemUsedPlayerIds = Array.from(room.sendItemUsedThisHand || []);
-
   // #region agent log
   if (viewerPlayerId) {
     const logData = {location:'index.js:609',message:'sanitizeStateFor - scores and cards',data:{viewerPlayerId,viewerTeam,teamAScore:aScore.total,teamBScore:bScore.total,teamACards:g.captures.A.cards.length,teamBCards:g.captures.B.cards.length,willSendTeamACards:viewerTeam==='A',willSendTeamBCards:viewerTeam==='B'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'};
@@ -714,8 +707,6 @@ function sanitizeStateFor(room, viewerPlayerId) {
       lastTakerPlayerId: g.lastTakerPlayerId,
       lastAction: g.lastAction,
       lastDeal: g.lastDeal,
-      sendItemUnlocked,
-      sendItemUsedPlayerIds,
       captures: {
         A: {
           cardsCount: g.captures.A.cards.length,
@@ -1209,47 +1200,6 @@ io.on("connection", (socket) => {
         seat: p.seat,
         text: msg
       });
-      ack?.({ ok: true });
-    } catch (e) {
-      ack?.({ ok: false, error: e?.message || "Greška." });
-    }
-  });
-
-  socket.on("player:send-item", ({ targetPlayerId, itemType }, ack) => {
-    try {
-      const roomId = socket.data.roomId;
-      const playerId = socket.data.playerId;
-      if (!roomId || !playerId) throw new Error("Niste u sobi.");
-      const room = rooms.get(roomId);
-      if (!room) throw new Error("Soba nije pronađena.");
-      if (room.phase !== "playing" || !room.game) throw new Error("Igra nije u toku.");
-      const fromPlayer = findPlayer(room, playerId);
-      if (!fromPlayer) throw new Error("Igrač nije pronađen.");
-      const toPlayer = findPlayer(room, targetPlayerId);
-      if (!toPlayer) throw new Error("Ciljani igrač nije pronađen.");
-      if (fromPlayer.team === toPlayer.team) throw new Error("Možete slati samo protivniku.");
-      if (toPlayer.isBot) throw new Error("Ne možete slati botu.");
-      const aScore = computeTeamScore(room.game.captures.A);
-      const bScore = computeTeamScore(room.game.captures.B);
-      const handDiff = Math.abs(aScore.total - bScore.total);
-      if (handDiff < 15) throw new Error("Opcija se otključava kada jedna ekipa vodi 15+ poena u rundi.");
-      if (!room.sendItemUsedThisHand) room.sendItemUsedThisHand = new Set();
-      if (room.sendItemUsedThisHand.has(playerId)) throw new Error("Već ste poslali predmet u ovoj rundi.");
-      const allowedItems = ["maramice"];
-      if (!allowedItems.includes(String(itemType || ""))) throw new Error("Nevažeći predmet.");
-      room.sendItemUsedThisHand.add(playerId);
-      const expiresAt = Date.now() + 30000; // 30 sekundi kod primaoca
-      io.to(roomId).emit("item-sent", {
-        fromPlayerId: fromPlayer.id,
-        fromPlayerName: fromPlayer.name,
-        fromSeat: fromPlayer.seat,
-        toPlayerId: toPlayer.id,
-        toPlayerName: toPlayer.name,
-        toSeat: toPlayer.seat,
-        itemType: String(itemType),
-        expiresAt
-      });
-      broadcastRoom(room);
       ack?.({ ok: true });
     } catch (e) {
       ack?.({ ok: false, error: e?.message || "Greška." });
